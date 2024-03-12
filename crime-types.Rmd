@@ -3,6 +3,7 @@ title: "(More on) What is going on with crime (types) in Phoenix?"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
   html_document:
+        theme: simplex 
 ---
 
 ```{r setup, include=FALSE}
@@ -238,19 +239,19 @@ p2 <- crimes.type.by.month %>%
 p2
 ```
 
-<br>
-
 ###
 
 <br>
 
+----
+
 <p align="center">
-[Back to R 2 Phoenix page](https://jacobtnyoung.github.io/R2PhX/)
+[Back to Open Criminology Phoenix page](https://jacobtnyoung.github.io/OpenCrimPhx/)
 </p>
 
 <br>
 
-***Please*** report any needed corrections to the [Issues](https://github.com/jacobtnyoung/R2PhX/issues/new) page. Thanks!
+***Please*** report any needed corrections to the [Issues](https://github.com/jacobtnyoung/OpenCrimPhx/issues/new) page. Thanks!
 
 <br><br>
 

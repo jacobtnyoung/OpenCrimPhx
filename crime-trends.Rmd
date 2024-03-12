@@ -3,6 +3,7 @@ title: "What is going on with crime in Phoenix?"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
   html_document:
+        theme: simplex 
 ---
 
 ```{r setup, include=FALSE}
@@ -620,9 +621,11 @@ crime.rates.year %>%
 
 <br>
 
-Note that these plots represents **all** types of crimes. For a more elaborate discussion of various crime types, check out this [analysis](https://jacobtnyoung.github.io/OpenCrimPhx/projects/crime-types.html).
+Note that these plots represents **all** types of crimes. For a more elaborate discussion of various crime types, check out this [analysis](https://jacobtnyoung.github.io/OpenCrimPhx/crime-types.html).
 
 <br>
+
+----
 
 <p align="center">
 [Back to Open Criminology Phoenix page](https://jacobtnyoung.github.io/OpenCrimPhx/)
