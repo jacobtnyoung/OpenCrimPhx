@@ -6,7 +6,7 @@ output:
 navbar:
   title: "Open Criminology Phoenix (OCP)"
   left:
-    - text: "Home"
+    - text: "About OCP"
       href: index.html
     - text: "Intro to OCP"
       href: intro.html
