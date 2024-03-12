@@ -3,11 +3,6 @@ title: "(More on) What is going on with crime (types) in Phoenix?"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
   html_document:
-    theme: yeti
-    toc: false
-    toc_float: false
-    collapsed: false
-    smooth_scroll: false
 ---
 
 ```{r setup, include=FALSE}
