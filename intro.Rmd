@@ -1,0 +1,21 @@
+---
+title: "Introduction to Open Criminology Phoenix (OCP)"
+---
+
+<br>
+
+*What is Open Criminology Phoenix (OCP) and, most importantly, Why?*
+
+Open science is a collaborative approach to research that emphasizes transparency, accessibility, and inclusivity. It involves sharing research findings, data, methodologies, and even the research process itself with the public and fellow researchers. In criminology, open science is particularly relevant as it promotes greater scrutiny and accountability in the study of crime and criminal behavior. By openly sharing data and methodologies, researchers in criminology can ensure that their findings are replicable and reliable, fostering trust within the field and allowing for more robust conclusions to be drawn. Moreover, open science encourages interdisciplinary collaboration, enabling researchers to leverage insights from various fields to better understand the complex dynamics of crime and develop more effective interventions and policies. Ultimately, by embracing open science principles, criminologists can contribute to a more transparent, equitable, and evidence-based approach to addressing the challenges of crime and justice in society.
+
+Open Criminology Phoenix (OCP) embraces these principles by examining questions in criminology and criminal justice as they pertain to the City of Phoenix. A key piece of this approach is the use of the city's open data portal. Put simply, OCP seeks to ask "what can we understand about crime (as well as issues in policing, etc.) using the city's open data portal?". 
+
+Another key feature of the site, and the open science approach, is that all of the analyses are reproducible. Every question asked on the site includes code and steps for getting to those answers.
+
+<br>
+
+----
+
+***Please*** report any needed corrections to the [Issues](https://github.com/jacobtnyoung/OpenCrimPhx/issues/new) page. Thanks!
+
+<br>

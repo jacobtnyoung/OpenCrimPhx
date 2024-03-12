@@ -1,0 +1,21 @@
+---
+title: "Open Criminology Phoenix (OCP)"
+---
+
+<br>
+
+Welcome to **Open Criminology Phoenix (OCP)**! This site is dedicated to developing an open science approach to understanding problems in criminology and criminal justice in Phoenix. The pages on this site pursue this approach by analyzing data from the [City of Phoenix](https://www.phoenix.gov/) [open data](https://www.phoenixopendata.com/) portal.
+
+What is the [City of Phoenix](https://www.phoenix.gov/) [open data](https://www.phoenixopendata.com/) portal? Great question! It is a repository for data that the city collects from various agencies and makes available. The site is well organized, so I would encourage you to open an new tab and check it out. The site has a [tips](https://www.phoenixopendata.com/pages/tips) page with a good intro to site navigation and how it is maintained.  
+
+*This* site uses the data from the [data portal](https://www.phoenixopendata.com/) to examine various topics. These topics are listed in the header above. For each topic, there are a set of questions that are examined using data from the portal. 
+
+To learn more about the basics, visit the introductory page for the site.
+
+<br>
+
+----
+
+***Please*** report any needed corrections to the [Issues](https://github.com/jacobtnyoung/OpenCrimPhx/issues/new) page. Thanks!
+
+<br>
