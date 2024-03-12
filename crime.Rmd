@@ -20,8 +20,8 @@ Crime trends are **very** difficult to assess, without seeing the data, because 
 
 This page focuses on analyses that pertain to understanding crime in Phoenix:  
 
-  * [What is going on with crime in Phoenix? (well, let's look!)](https://jacobtnyoung.github.io/OpenCrimPhx/projects/crime-trends.html)  
-  * [(More on) What is going on with crime (**types**) in Phoenix?](https://jacobtnyoung.github.io/R2PhX/projects/crime-types.html)
+  * [What is going on with crime in Phoenix? (well, let's look!)](https://jacobtnyoung.github.io/OpenCrimPhx/docs/crime-trends.html)  
+  * [(More on) What is going on with crime (**types**) in Phoenix?](https://jacobtnyoung.github.io/OpenCrimPhx/docs/crime-types.html)
 
 
 

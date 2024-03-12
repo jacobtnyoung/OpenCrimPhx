@@ -11,12 +11,12 @@
 
 
 
-<title>Crime in Phoenix</title>
+<title>(More on) What is going on with crime (types) in Phoenix?</title>
 
 <script src="site_libs/header-attrs-2.25/header-attrs.js"></script>
 <script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<link href="site_libs/bootstrap-3.3.5/css/simplex.min.css" rel="stylesheet" />
+<link href="site_libs/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
 <script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
 <script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
 <script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
@@ -263,60 +263,144 @@ $(document).ready(function () {
 
 
 
-<h1 class="title toc-ignore">Crime in Phoenix</h1>
+<h1 class="title toc-ignore">(More on) What is going on with crime
+(types) in Phoenix?</h1>
+<h4 class="date">12 March, 2024</h4>
 
 </div>
 
 
 <p><br></p>
-<p><em>What is going on with crime in Phoenix?</em></p>
-<p>What do you think? Is crime on the rise? Is crime declining? Having a
-hard time answering that question (<strong>and</strong> <em>being
-confident about your answer</em>)? Well, you should! I certainly do (and
-<a href="https://jacobtnyoung.github.io/">I am a criminologist</a>).
-But, so are most people. <a
-href="https://news.gallup.com/poll/268283/describe-problem-crime-serious.aspx">Gallup
-polling</a> has consistently shown that individuals’ perceptions of
-crime does not (REPEAT <strong>does not</strong>) track trends in
-crime.</p>
-<p>Crime trends are <strong>very</strong> difficult to assess, without
-seeing the data, because of the peculiar nature of crime.</p>
-<ul>
-<li><p>First, crime is very concentrated in specific geographic areas
-and exposure to crime and victimization is disproportionately
-concentrated among groups. If you are fortunate enough to not experience
-victimization, then your assessment of the frequency of events probably
-comes from hearsay or media accounts. These are both “<em>biased</em>”
-accounts in the sense that they do not reflect representative cases of
-crime. In other words, we tend to hear about things that happen and
-don’t really hear about when things don’t happen.</p></li>
-<li><p>Second, when individuals do experience victimization, they tend
-to overestimate the prevalence of crime. This makes intuitive sense, but
-makes it difficult to assess the actual prevalence of crime.</p></li>
-<li><p>Third, we measure crime very poorly. There is often a large time
-gap between when crime happens and when those data are compiled into
-annual reports of crime.</p></li>
-</ul>
+<p>In a separate post, I discuss what is currently going on with <a
+href="https://jacobtnyoung.github.io/R2PhX/projects/PHXcrime_trends.html">crime
+in Phoenix</a>.</p>
+<p>Here, I want to urther unpack the trends by focusing on crime
+types.</p>
+<p><em>Note: as with other posts, just click the tab to see the
+code</em>…</p>
+<p><br><br></p>
+<div id="monthly-counts-over-the-years" class="section level3 tabset">
+<h3 class="tabset">Monthly Counts over the Years</h3>
 <p><br></p>
-<p>This page focuses on analyses that pertain to understanding crime in
-Phoenix:</p>
-<ul>
-<li><a
-href="https://jacobtnyoung.github.io/OpenCrimPhx/docs/crime-trends.html">What
-is going on with crime in Phoenix? (well, let’s look!)</a><br />
-</li>
-<li><a
-href="https://jacobtnyoung.github.io/OpenCrimPhx/docs/crime-types.html">(More
-on) What is going on with crime (<strong>types</strong>) in
-Phoenix?</a></li>
-</ul>
+<div id="section" class="section level4">
+<h4></h4>
 <p><br></p>
-<hr />
+<p>Let’s pull the most recent data for <strong>crime incidents</strong>
+from the site.</p>
+<p>The data are reported as UCR crime classifications and have
+geographic information (block address, zip) as well as the date and time
+of the incident. As of March, 2024, there were 530,664 crime incidents
+with complete data from 11/2015 to within a week of the current
+date.</p>
+<p>Let’s start by looking at the monthly count of incidents over all
+crime types.</p>
+<p><br></p>
+<p><img src="crime-types_files/figure-html/unnamed-chunk-2-1.png" width="1152" /></p>
+<p>Now, let’s break down the figure above by crime <em>type</em>:</p>
+<p><br></p>
+<p><img src="crime-types_files/figure-html/unnamed-chunk-3-1.png" width="1152" /></p>
+<p><br></p>
+</div>
+<div id="getting-the-data-code" class="section level4">
+<h4>Getting the data (<strong>code</strong>)</h4>
+<pre class="r"><code>library( dplyr )
+library( tidyr )
+library( ggplot2 )
+library( forecast )
+library( gridExtra )
+
+# Get the data.
+url &lt;- &quot;https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crime-data_crime-data_crimestat.csv&quot;
+crime.data &lt;- read.csv( url, as.is = TRUE, header = TRUE )
+crime.data &lt;- na.omit( crime.data )
+
+# Clean up the dates.
+date.vec &lt;- strptime( crime.data$OCCURRED.ON, format=&quot;%m/%d/%Y %H:%M&quot; )
+crime.data$year   &lt;- format( date.vec, format=&quot;%Y&quot; )
+crime.data$month  &lt;- format( date.vec, format=&quot;%B&quot; )
+
+# Drop cases for the most recent month.
+crime.data &lt;- crime.data[ ! ( 
+  crime.data$month == format( Sys.Date(), format=&quot;%B&quot; ) &amp;
+  crime.data$year == format( Sys.Date(), format=&quot;%Y&quot; ) 
+  ) , ]
+
+# Crimes by month.
+crimes.by.month &lt;-
+  crime.data %&gt;% 
+  select( year, month ) %&gt;%   
+  filter( year != 2015 ) %&gt;%
+  filter( !is.na( year ) ) %&gt;% 
+  group_by( year, month ) %&gt;% 
+  summarize( counts = n() ) %&gt;% 
+  arrange( match( month, month.name ) ) 
+crimes.by.month$month &lt;-factor( crimes.by.month$month,levels = month.name )
+crimes.by.month$month &lt;-factor( month.abb[crimes.by.month$month],levels = month.abb )
+
+# Create crimes by type by month object.
+crimes.type.by.month &lt;-
+  crime.data %&gt;% 
+  select( year, month, UCR.CRIME.CATEGORY ) %&gt;%   
+  filter( year != 2015 ) %&gt;%  
+  filter( !is.na( year ) ) %&gt;% 
+  group_by( year, month, UCR.CRIME.CATEGORY ) %&gt;% 
+  summarize( counts = n() ) %&gt;% 
+  arrange( match( month, month.name ) ) %&gt;% 
+  select( !month ) %&gt;% 
+  mutate(crime.type = case_when(
+    UCR.CRIME.CATEGORY == &quot;AGGRAVATED ASSAULT&quot; ~ &quot;Assault&quot;,
+    UCR.CRIME.CATEGORY == &quot;ARSON&quot; ~ &quot;Arson&quot;,
+    UCR.CRIME.CATEGORY == &quot;BURGLARY&quot; ~ &quot;Burglary&quot;,
+    UCR.CRIME.CATEGORY == &quot;DRUG OFFENSE&quot; ~ &quot;Drugs&quot;,
+    UCR.CRIME.CATEGORY == &quot;LARCENY-THEFT&quot; ~ &quot;Theft&quot;,
+    UCR.CRIME.CATEGORY == &quot;MURDER AND NON-NEGLIGENT MANSLAUGHTER&quot; ~ &quot;Homicide&quot;,
+    UCR.CRIME.CATEGORY == &quot;MOTOR VEHICLE THEFT&quot; ~ &quot;MV Theft&quot;,
+    UCR.CRIME.CATEGORY == &quot;RAPE&quot; ~ &quot;Rape&quot;,
+    UCR.CRIME.CATEGORY == &quot;ROBBERY&quot; ~ &quot;Robbery&quot; ) )
+crimes.type.by.month$month &lt;-factor( crimes.type.by.month$month,levels = month.name )
+crimes.type.by.month$month &lt;-factor( month.abb[crimes.type.by.month$month],levels = month.abb )</code></pre>
+<p><br></p>
+</div>
+<div id="plotting-the-data-code" class="section level4">
+<h4>Plotting the data (<strong>code</strong>)</h4>
+<pre class="r"><code>p1 &lt;- crimes.by.month %&gt;% 
+  ggplot( aes( month, counts, group = 1 ) ) +
+  geom_point( ) +
+  geom_line( ) +
+  facet_grid( ~ year , scales=&quot;free&quot; ) +
+  theme( axis.text.x=element_blank() ) +
+  xlab( &quot;Month&quot; )
+p1
+
+p2 &lt;- crimes.type.by.month %&gt;% 
+  ggplot( aes( month, counts, group = 1 ) ) +
+  geom_point( ) +
+  geom_line( ) +
+  facet_grid( crime.type ~ year, scales=&quot;free&quot; ) +
+  theme( axis.text.x=element_blank(), 
+         strip.text.x = element_text( size = 15 ),
+         strip.text.y = element_text( size = 12 ) ) +
+  xlab( &quot;Month&quot; )
+p2</code></pre>
+<p><br></p>
+</div>
+</div>
+<div id="section-1" class="section level3">
+<h3></h3>
+<p><br></p>
+<p align="center">
+<a href="https://jacobtnyoung.github.io/R2PhX/">Back to R 2 Phoenix
+page</a>
+</p>
+<p><br></p>
 <p><strong><em>Please</em></strong> report any needed corrections to the
-<a
-href="https://github.com/jacobtnyoung/OpenCrimPhx/issues/new">Issues</a>
+<a href="https://github.com/jacobtnyoung/R2PhX/issues/new">Issues</a>
 page. Thanks!</p>
-<p><br></p>
+<p><br><br></p>
+<div id="last-updated-12-march-2024" class="section level6">
+<h6><strong><em>Last updated 12 March, 2024</em></strong></h6>
+</div>
+</div>
 
 
 
