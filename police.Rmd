@@ -1,0 +1,21 @@
+---
+title: "Policing in Phoenix"
+---
+
+<br>
+
+*What is going on with policing in Phoenix?*
+
+<br>
+
+This page focuses on analyses that pertain to understanding policing in Phoenix:  
+
+  * [Are police shootings by police officers increasing in Phoenix? (and other questions...)](https://jacobtnyoung.github.io/OpenCrimPhx/police-shootings.html)
+
+<br>
+
+----
+
+***Please*** report any needed corrections to the [Issues](https://github.com/jacobtnyoung/OpenCrimPhx/issues/new) page. Thanks!
+
+<br>

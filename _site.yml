@@ -12,3 +12,5 @@ navbar:
       href: intro.html
     - text: "Crime in Phoenix"
       href: crime.html
+    - text: "Policing in Phoenix"
+      href: police.html
