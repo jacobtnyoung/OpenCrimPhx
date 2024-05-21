@@ -498,7 +498,7 @@ The plot showing the monthly rates by year helps us visualize the data better. N
   
   + Second, relative to past years, more recent criminal incidents tend to be lower. For example, 2022 and 2023 both show a generally lower rate of crime incidents relative to 2017-2021. 
   
-  + Third, there has been a considerable decline in crime incidents toward the end of 2022 that has continued into 2023.
+  + Third, there has been a considerable decline in crime incidents toward the end of 2022 that has continued into 2024.
 
 <br>
 
