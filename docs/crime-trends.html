@@ -268,7 +268,7 @@ $(document).ready(function () {
 
 <h1 class="title toc-ignore">What is going on with crime in
 Phoenix?</h1>
-<h4 class="date">24 June, 2024</h4>
+<h4 class="date">10 July, 2024</h4>
 
 </div>
 
@@ -292,7 +292,7 @@ beginning November 2015 up to 7 days before the posting date.</p>
 from the site.</p>
 <p>The data are reported as UCR crime classifications and have
 geographic information (block address, zip) as well as the date and time
-of the incident. As of June, 2024, there were 546,124 crime incidents
+of the incident. As of July, 2024, there were 548,459 crime incidents
 with complete data from 11/2015 to within a week of the current
 date.</p>
 <p>Let’s start by looking at the daily counts of crime from when the
@@ -352,9 +352,9 @@ head( date.vec )</code></pre>
 <pre><code>## [1] &quot;2015-11-01 MST&quot; &quot;2015-11-01 MST&quot; &quot;2015-11-01 MST&quot; &quot;2015-11-01 MST&quot;
 ## [5] &quot;2015-11-01 MST&quot; &quot;2015-11-01 MST&quot;</code></pre>
 <pre class="r"><code>tail( date.vec )</code></pre>
-<pre><code>## [1] &quot;2024-05-31 22:30:00 MST&quot; &quot;2024-05-31 22:53:00 MST&quot;
-## [3] &quot;2024-05-31 22:57:00 MST&quot; &quot;2024-05-31 23:01:00 MST&quot;
-## [5] &quot;2024-05-31 23:27:00 MST&quot; &quot;2024-05-31 23:59:00 MST&quot;</code></pre>
+<pre><code>## [1] &quot;2024-06-30 23:00:00 MST&quot; &quot;2024-06-30 23:00:00 MST&quot;
+## [3] &quot;2024-06-30 23:00:00 MST&quot; &quot;2024-06-30 23:23:00 MST&quot;
+## [5] &quot;2024-06-30 23:30:00 MST&quot; &quot;2024-06-30 23:49:00 MST&quot;</code></pre>
 <pre class="r"><code># Now, let&#39;s use the format() function to create several objects based on the date and time.
 crime.data$year   &lt;- format( date.vec, format=&quot;%Y&quot; )
 crime.data$month  &lt;- format( date.vec, format=&quot;%B&quot; )
@@ -423,7 +423,7 @@ changes:</p>
 <li><p>First, we should break it down by year and month. This adjustment
 corrects for the seasonality of crime. One way to show this seasonal
 variation in crime incidents is to plot the monthly incidents for each
-year. Note that for 2024, the line stops the month before June, as that
+year. Note that for 2024, the line stops the month before July, as that
 is the last month of complete data from the portal.</p></li>
 <li><p>Second, we should adjust the counts to be <em>rates</em> of
 incidents of crime. This will adjust for differences in the population
@@ -658,8 +658,8 @@ Criminology Phoenix page</a>
 href="https://github.com/jacobtnyoung/OpenCrimPhx/issues/new">Issues</a>
 page. Thanks!</p>
 <p><br><br></p>
-<div id="last-updated-24-june-2024" class="section level6">
-<h6><strong><em>Last updated 24 June, 2024</em></strong></h6>
+<div id="last-updated-10-july-2024" class="section level6">
+<h6><strong><em>Last updated 10 July, 2024</em></strong></h6>
 </div>
 </div>
 
