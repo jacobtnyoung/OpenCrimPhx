@@ -307,16 +307,37 @@ Crime Data for Phoenix</a> page.</p>
 <p><br><br></p>
 <div id="setup" class="section level2">
 <h2>Setup</h2>
-<p>First things first. We want to get the data loaded, wrangled, and
-ready for examining. If you want to skip that, feel free! If you want to
-see “how we get there”, just click the “Show” button on the right.</p>
+<p>To get going, we will load all the libraries we need. The code to
+generate everything you see here is hidden (to reduce clutter). But, if
+you want to see “how we get there”, just click the “Show” button on the
+right.</p>
 <p>Next, we will load the data. These files are available in the <a
 href="https://jacobtnyoung.github.io/OpenCrimPhx/data/data-rodeo">data-rodeo</a>
 folder for the repository. You can load them directly from there if you
 prefer. However, I will load them from my local files.</p>
+<pre class="r"><code># clear workspace
+rm( list = ls() )
+
+# load libraries
+library( dplyr )    # used for wrangling the data
+library( tidyr )    # used for wrangling the data
+library( ggplot2 )  # for plotting
+library( scales )   # for formatting the text
+library( forecast ) # for working with time series data
+library( here )     # for referencing the local directory
+
+
+# define the objects
+crimeData       &lt;- readRDS( here( &quot;data/data-rodeo/crimeData.rds&quot; ) )
+crimesByDay     &lt;- readRDS( here( &quot;data/data-rodeo/crimesByDay.rds&quot; ) )
+crimesByMonth   &lt;- readRDS( here( &quot;data/data-rodeo/crimesByMonth.rds&quot; ) )
+crimesByYear    &lt;- readRDS( here( &quot;data/data-rodeo/crimesByYear.rds&quot; ) )
+crimeRatesMonth &lt;- readRDS( here( &quot;data/data-rodeo/crimeRatesMonth.rds&quot; ) )
+crimeRatesYear  &lt;- readRDS( here( &quot;data/data-rodeo/crimeRatesYear.rds&quot; ) )</code></pre>
 <p><br></p>
-<div id="daily-trend" class="section level4">
-<h4>Daily trend</h4>
+<div id="daily-trends-in-crime-from-2016-to-present"
+class="section level3">
+<h3>Daily Trends in Crime from 2016 to Present</h3>
 <p><br></p>
 <p>Let’s pull the most recent data for <strong>crime incidents</strong>
 from the site.</p>
@@ -329,11 +350,20 @@ date.</p>
 data are first available (i.e. November 2015) and look at the trend up
 to the current date.</p>
 <p><br></p>
-<p><img src="crime-trends_files/figure-html/unnamed-chunk-3-1.png" width="1152" /></p>
+<pre class="r"><code>crimesByDay %&gt;% 
+  ggplot( aes( days, counts ) ) +
+  geom_line( color = &quot;grey80&quot; ) +
+  geom_point( alpha = 1/5, color = &quot;black&quot; ) +
+  labs( x = &quot;&quot;, y = &quot;Counts of Crime per Day&quot; ) + 
+  ggtitle( &quot;Daily Crime Counts in Phoenix, AZ&quot; ) +
+  geom_smooth( color = &quot;#751913&quot;, span = 0.2 ) +
+  scale_y_continuous( label = comma ) +
+  theme_minimal() </code></pre>
+<p><img src="crime-trends_files/figure-html/unnamed-chunk-2-1.png" width="1152" /></p>
 <p><br></p>
 </div>
-<div id="rates-of-crime" class="section level4">
-<h4>Rates of crime</h4>
+<div id="rates-of-crime" class="section level3">
+<h3>Rates of Crime</h3>
 <p><br></p>
 <p>The daily count view is useful, but it might help if we make two
 changes:</p>
@@ -351,30 +381,51 @@ count of crimes divided by the population size, then multiplied by
 100,000 people in the population. The <a
 href="https://jacobtnyoung.github.io/OpenCrimPhx/crime-preprocessing.html">Pre-Processing
 Crime Data for Phoenix</a> page goes into detail on how these rates are
-calculated.<br />
-<br></p></li>
+calculated.</p></li>
 </ul>
-</div>
-<div id="what-about-crime-by-month" class="section level3">
-<h3>What about crime by month?</h3>
 <p><br></p>
-<div id="seasonality" class="section level4">
-<h4>Seasonality</h4>
-<p><br></p>
-<p><img src="crime-trends_files/figure-html/unnamed-chunk-5-1.png" width="1152" /></p>
+<div id="rates-of-crime-by-month-from-2016-to-present"
+class="section level4">
+<h4>Rates of Crime by Month from 2016 to Present</h4>
+<pre class="r"><code># create a time series object for plotting
+monthlyCrimeRateByYear &lt;- ts(
+  matrix( as.matrix( crimeRatesMonth ), ncol = 1 ), 
+  start=c( 2016, 1 ), 
+  end=c( as.numeric( tail( names( crimeRatesMonth ), n=1 ) ), 12 ), frequency=12
+)
+
+# render the plot
+monthlyCrimeRateByYear %&gt;% 
+  ggseasonplot(
+    year.labels = TRUE,
+    continuous = FALSE,
+    main = &quot;Plot of Monthly Crime Rate by Years for Phoenix, AZ&quot;,
+    col = colorRampPalette(c(&quot;#f7968f&quot;, &quot;#c41104&quot;))( dim( crimeRatesMonth )[2] ) ) + 
+  scale_y_continuous( label = comma ) +
+  geom_line( size = 1.2 ) +
+  theme_minimal() </code></pre>
+<p><img src="crime-trends_files/figure-html/unnamed-chunk-3-1.png" width="1152" /></p>
 <p><br></p>
 <p>The plot showing the monthly rates by year helps us visualize the
 data better. Note that the current year, 2024, is missing a label
 because the year is incomplete.</p>
 <p><br></p>
 </div>
-</div>
-<div id="what-about-crime-by-year" class="section level3">
-<h3>What about crime by year?</h3>
+<div id="rates-of-crime-by-year-from-2016-to-present"
+class="section level4">
+<h4>Rates of Crime by Year from 2016 to Present</h4>
 <p><br></p>
-<div id="seasonality-1" class="section level4">
-<h4>Seasonality</h4>
-<p><br></p>
+<pre class="r"><code>crimeRatesYear %&gt;%
+  # drop the current year because it distorts the graph
+  filter( year != as.numeric( format( Sys.Date(), format=&quot;%Y&quot; ) ) ) %&gt;%
+    ggplot( aes( year, rates, group = 1 ) ) +
+    geom_line( color = &quot;grey20&quot;, size = 1.2 ) +
+    geom_point( color = &quot;firebrick&quot;, size = 4 ) +
+    labs( x = &quot;&quot;, y = &quot;Rate of Crime per Year&quot; ) + 
+    ggtitle( &quot;Plot of Crime Rate by Year in Phoenix, AZ&quot; ) +
+    scale_y_continuous( label = comma ) +
+    theme_minimal() </code></pre>
+<p><img src="crime-trends_files/figure-html/unnamed-chunk-4-1.png" width="1152" /></p>
 <p><br></p>
 </div>
 </div>
