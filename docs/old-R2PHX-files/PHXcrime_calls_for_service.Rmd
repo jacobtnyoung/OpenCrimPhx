@@ -1,0 +1,544 @@
+---
+title: "What is going on with calls for service in Phoenix?"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    theme: yeti
+    toc: false
+    toc_float: false
+    collapsed: false
+    smooth_scroll: false
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set( echo = TRUE, 
+                      message = FALSE, 
+                      warning = FALSE, 
+                      fig.width = 12, 
+                      fig.height = 10 )
+
+```
+
+
+```{r, echo = FALSE, eval = TRUE, results = FALSE, fig.show = "hide"}
+
+# clear workspace.
+rm( list = ls() )
+
+# load libraries.
+library( dplyr )
+library( tidyr )
+library( ggplot2 )
+library( scales )
+library( forecast )
+library( openxlsx )
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+# Calls for service.
+
+### The download on this is large, so you have to set the timeout on these.
+
+# Check the time out for download.
+getOption( "timeout" )
+
+# Set the download timeout to be three minutes (180 seconds).
+options( timeout = 180 )
+
+### Because the main file is so large, I download each year file.
+
+url.set <- NULL
+
+url.set[1] <- "https://www.phoenixopendata.com/dataset/64a60154-3b2d-4583-8fb5-6d5e1b469c28/resource/d53e8f3f-2ce5-4e58-b03d-fe3721c9354e/download/calls-for-service2016-calls-for-servicecallsforsrvc2016.csv"
+
+url.set[2] <- "https://www.phoenixopendata.com/dataset/64a60154-3b2d-4583-8fb5-6d5e1b469c28/resource/14435329-45ff-4584-8eda-5218b52cca56/download/calls-for-service2017-calls-for-servicecallsforsrvc2017.csv"
+
+url.set[3] <- "https://www.phoenixopendata.com/dataset/64a60154-3b2d-4583-8fb5-6d5e1b469c28/resource/30a4d911-41a3-4d4a-a817-ade6f12b8131/download/callsforsrvc2018.csv"
+
+url.set[4] <- "https://www.phoenixopendata.com/dataset/64a60154-3b2d-4583-8fb5-6d5e1b469c28/resource/7edc831c-9167-41a9-9b7b-61a167cb9739/download/callsforsrvc2019.csv"
+
+url.set[5] <- "https://www.phoenixopendata.com/dataset/64a60154-3b2d-4583-8fb5-6d5e1b469c28/resource/3c0ae3ec-456f-45f4-801d-b8d6699ba32e/download/callsforsrvc2020.csv"
+
+url.set[6] <- "https://www.phoenixopendata.com/dataset/64a60154-3b2d-4583-8fb5-6d5e1b469c28/resource/33094536-e3b8-4634-a4a6-4e0daca4aa91/download/callsforsrvc2021.csv"
+
+url.set[7] <- "https://www.phoenixopendata.com/dataset/64a60154-3b2d-4583-8fb5-6d5e1b469c28/resource/27963751-fe11-49ab-a0a8-627cd9338e17/download/callsforsrvc2022.csv"
+
+url.all <- "https://www.phoenixopendata.com/dataset/64a60154-3b2d-4583-8fb5-6d5e1b469c28/resource/1d536ee6-7ffb-49c3-bffe-5cdd98a3c97e/download/callsforservice.csv"
+
+
+options( timeout = 360 )
+
+url.all <- "https://www.phoenixopendata.com/dataset/64a60154-3b2d-4583-8fb5-6d5e1b469c28/resource/1d536ee6-7ffb-49c3-bffe-5cdd98a3c97e/download/callsforservice.csv"
+
+
+calls.data <- read.csv( url.all, as.is = TRUE, header = TRUE )
+
+
+
+
+calls.data <- na.omit( calls.data )
+
+1. probably want to start by comparing the departmental report to the others.
+2. take the departmental reports as those I think are actual incidents?
+
+
+???
+  
+I think you should build a loop to pull the files together for each year, then basically repeat the analysis you did the for the crime trends file.  
+
+Here is the data variable: 
+
+date.vec <- strptime( calls.data$CALL_RECEIVED, format="%m/%d/%Y %H:%M" )
+crime.data$year   <- format( strptime( calls.data$CALL_RECEIVED, format="%m/%d/%Y %H:%M" ), format="%B" )
+  
+
+!!!HERE WITH CLEANUP!!!!
+
+
+
+
+# Help with formating the text.
+n.cases <- dim( crime.data )[1]
+
+# Clean up the dates.
+date.vec <- strptime( crime.data$OCCURRED.ON, format="%m/%d/%Y %H:%M" )
+crime.data$year   <- format( date.vec, format="%Y" )
+crime.data$month  <- format( date.vec, format="%B" )
+crime.data$day365 <- format( date.vec, format="%j" )
+crime.data$week   <- format( date.vec, format="%V" )
+
+# Drop cases for the most recent month.
+crime.data <- crime.data[ ! ( 
+  crime.data$month == format( Sys.Date(), format="%B" ) &
+  crime.data$year == format( Sys.Date(), format="%Y" ) 
+  ) , ]
+
+# Use dplyr() to create an object that is the daily count of crimes.
+crimes.by.day <- 
+  crime.data %>% 
+  select( year, month, day365 ) %>%   
+  filter( !is.na( day365 ) ) %>% 
+  group_by( year, month, day365 ) %>% 
+  summarize( counts = n() ) %>% 
+  ungroup() %>% 
+  mutate( day.time = seq( 1, length( counts ) ) ) %>% 
+  select( counts, day.time ) %>% 
+  mutate( days = 
+            seq( 
+              as.Date( head( strptime( crime.data$OCCURRED.ON, format="%m/%d/%Y %H:%M" ) ) )[1], 
+              as.Date( tail( strptime( crime.data$OCCURRED.ON, format="%m/%d/%Y %H:%M" ) ) )[6], 
+              length.out = length( counts ) ) ) %>% 
+  arrange( day.time )
+
+crimes.by.day <- as.data.frame( crimes.by.day )
+
+# Use dplyr() to create an object that is the monthly count of crimes.
+crimes.by.month <- 
+  crime.data %>% 
+  select( year, month ) %>%   
+  filter( year != 2015 ) %>%  
+  filter( !is.na( year ) ) %>% 
+  group_by( year, month ) %>% 
+  summarize( counts = n() ) %>% 
+  spread( year, counts ) %>% 
+  arrange( match( month, month.name ) ) %>% 
+  select( !month )
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+# Population data for Phoenix.
+
+# get the population data to create the rates.
+pop.data <- read.xlsx(
+  "https://www2.census.gov/programs-surveys/popest/tables/2010-2019/cities/totals/SUB-IP-EST2019-ANNRES-04.xlsx",
+  colNames = TRUE,
+  startRow = 4
+)
+
+# Find the row with the data for Phoenix.
+grep("Phoenix", pop.data[,1])
+
+# It is the 55th row in the object. So, we need to pull that row.
+phoenix.pop <-  pop.data[55,]
+phoenix.pop
+
+# Now, we only need the data for 2016-2019.
+phoenix.pop <- phoenix.pop[-c(1:9)]
+phoenix.pop
+
+# Just add the difference for each year until you get the actual demographic data..
+phoenix.pop.2020 <- phoenix.pop[4] + phoenix.pop[4] - phoenix.pop[3]
+phoenix.pop.2021 <- phoenix.pop.2020 + phoenix.pop[4] - phoenix.pop[3]
+phoenix.pop.2022 <- phoenix.pop.2021 + phoenix.pop[4] - phoenix.pop[3]
+phoenix.pop.data <- as.numeric( c( phoenix.pop, phoenix.pop.2020, phoenix.pop.2021, phoenix.pop.2022 ) )
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+# Create the rates using the population data.
+
+# now, calculate the crime rate. Crime rate is calculated as the count of crimes divided by the population size, then multipled by 100,000.
+
+crime.rates <- as.data.frame( crimes.by.month )
+
+for ( i in 1: dim( crime.rates )[2] ){
+ crime.rates[,i] <- ( crime.rates[,i] / phoenix.pop.data[i] ) * 100000
+}
+
+# Create the time series.
+monthly.crime.rate.by.year <- ts(
+  matrix( as.matrix( crime.rates ), ncol = 1 ), 
+  start=c( 2016, 1 ), 
+  end=c( as.numeric( tail( names( crime.rates ), n=1 ) ), 12 ), frequency=12
+)
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+# Build the plots you will present.
+
+crimes.by.day %>% 
+  ggplot( aes( days, counts ) ) +
+  geom_line( color = "grey80" ) +
+  geom_point( alpha = 1/5, color = "black" ) +
+  labs( x = "", y = "Counts of Crime per Day" ) + 
+  ggtitle( "Daily Crime Counts in Phoenix, AZ" ) +
+  geom_smooth( color = "darkblue", span = 0.2 ) +
+  scale_y_continuous(label = comma) +
+  theme_minimal() 
+
+monthly.crime.rate.by.year %>% 
+  ggseasonplot(
+    year.labels=FALSE,
+    main = "Plot of Monthly Crime Rate by Years for Phoenix",
+    col = rainbow( dim( crime.rates )[2] ) ) + 
+  scale_y_continuous( label = comma ) +
+  geom_line( size = 1.2 ) +
+  theme_gray()  
+
+```
+
+
+<br>
+
+What do you think? Is crime on the rise? Is crime declining? Having a hard time answering that question (**and** *being confident about your answer*)? Well, you should! I certainly do (and [I am a criminologist](https://jacobtnyoung.github.io/)). But, so are most people. [Gallup polling](https://news.gallup.com/poll/268283/describe-problem-crime-serious.aspx) has consistently shown that individuals' perceptions of crime does not (REPEAT **does not**) track trends in crime.  
+
+As I discuss in a [different post](https://jacobtnyoung.github.io/R2PhX/projects/PHXcrime.html), crime trends are **very** difficult to assess, without seeing the data, because of the peculiar nature of crime and the huge delay in reporting of crime (because of the way it is collected). 
+
+If we want to know what is going on with crime in Phoenix, we can take a look at the [Crime Incidents](https://www.phoenixopendata.com/dataset/crime-data) data from the [data portal](https://www.phoenixopendata.com/). The city updates the file at 11am every day and it contains data beginning November 2015 up to 7 days before the posting date.
+
+<br><br>
+
+
+### To the data! {.tabset}
+
+<br>
+
+#### Daily trend
+
+<br>
+
+Let's pull the most recent data for **crime incidents** from the site.
+
+The data are reported as UCR crime classifications and have geographic information (block address, zip) as well as the date and time of the incident. As of `r format(Sys.time(), '%B, %Y')`, there were `r comma(n.cases)` crime incidents with complete data from 11/2015 to within a week of the current date.   
+
+Let's start by looking at the daily counts of crime from when the data are first available (i.e. November 2015) and look at the trend up to the current date. 
+
+<br>
+
+```{r, echo = FALSE, eval = TRUE}
+
+crimes.by.day %>% 
+  ggplot( aes( days, counts ) ) +
+  geom_line( color = "grey80" ) +
+  geom_point( alpha = 1/5, color = "black" ) +
+  labs( x = "", y = "Counts of Crime per Day" ) + 
+  ggtitle( "Daily Crime Counts in Phoenix, AZ" ) +
+  geom_smooth( color = "darkblue", span = 0.2 ) +
+  scale_y_continuous(label = comma) +
+  theme_minimal() 
+
+```
+
+<br>
+The plot shows a fairly stable daily count of crimes. *But*, a marked **decline** beginning at the end of 2019. Since the end of 2019 through the beginning of 2021, crime incidents have been trending down in Phoenix. However, beginning in 2021, there is an upward trend that continues through 2022.   
+
+For a more in-depth examination of crime in 2020 and how it differed from 2019, check out this [analysis](https://jacobtnyoung.github.io/R2PhX/projects/PHXcrime_types_2020.html).
+<br>
+
+<br><br>
+
+#### Getting the data (**code**)  
+
+<br>
+
+```{r, echo = TRUE, eval = FALSE}
+
+# set the url where the data are located.
+url <- "https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crimestat.csv"
+
+# pull in the csv file.
+crime.data <- read.csv( url, as.is = TRUE, header = TRUE )
+
+# drop cases missing on date.
+crime.data <- na.omit( crime.data )
+
+# take a look at the data.
+head( crime.data )  
+
+``` 
+
+#### Preprocessing the data (**code**)  
+
+<br>
+
+Now that the data are in the workspace, let's clean up the date and the crime categories to make plotting them fairly easy. To do so, I am drawing from a [lab](https://ds4ps.org/cpp-526-sum-2020/labs/lab-05-instructions.html) from ASU's [Foundations of Data Science Part I](https://ds4ps.org/) course in the Program Evaluation and Data Analytics. See the "Working with Dates" section of the site. We will use the `strptime()` and `format()` functions here.
+
+<br>
+
+```{r, echo = TRUE, eval = TRUE}
+
+# The date and time variable is a character string.
+head( crime.data$OCCURRED.ON )
+is.character( crime.data$OCCURRED.ON )
+
+# Convert the string dates to a date format code.
+date.vec <- strptime( crime.data$OCCURRED.ON, format="%m/%d/%Y %H:%M" )
+head( date.vec )
+tail( date.vec )
+
+# Now, let's use the format() function to create several objects based on the date and time.
+crime.data$year   <- format( date.vec, format="%Y" )
+crime.data$month  <- format( date.vec, format="%B" )
+crime.data$day365 <- format( date.vec, format="%j" )
+crime.data$week   <- format( date.vec, format="%V" )
+
+# Drop cases for the most recent month since the low counts will through off the scale.
+crime.data <- crime.data[ ! ( 
+  crime.data$month == format( Sys.Date(), format="%B" ) &
+    crime.data$year == format( Sys.Date(), format="%Y" ) 
+) , ]
+
+```
+
+#### Plotting the data (**code**)
+
+<br>
+
+```{r, echo = TRUE, eval = FALSE}
+
+# Now, let's use dplyr and tidyr to get the data in a format where we can look at the time series.
+library( dplyr )
+library( tidyr )
+
+# Use dplyr() to create an object that is the daily count of crimes.
+crimes.by.day <- 
+  crime.data %>% 
+  select( year, month, day365 ) %>%   
+  filter( !is.na( day365 ) ) %>% 
+  group_by( year, month, day365 ) %>% 
+  summarize( counts = n() ) %>% 
+  ungroup() %>% 
+  mutate( day.time = seq( 1, length( counts ) ) ) %>% 
+  select( counts, day.time ) %>% 
+  mutate( days = 
+            seq( 
+              as.Date( head( strptime( crime.data$OCCURRED.ON, format="%m/%d/%Y %H:%M" ) ) )[1], 
+              as.Date( tail( strptime( crime.data$OCCURRED.ON, format="%m/%d/%Y %H:%M" ) ) )[6], 
+              length.out = length( counts ) ) ) %>% 
+  arrange( day.time )
+
+
+# Finally, let's take a look using ggplot2.
+library( ggplot2 )
+
+# Add the dates for the plot.
+crimes.by.day <- as.data.frame( crimes.by.day )
+
+# Now let's plot it!
+crimes.by.day %>% 
+  ggplot( aes( days, counts ) ) +
+  geom_line( color = "grey80" ) +
+  geom_point( alpha = 1/5, color = "black" ) +
+  labs( x = "", y = "Counts of Crime per Day" ) + 
+  ggtitle( "Daily Crime Counts in Phoenix, AZ" ) +
+  geom_smooth( color = "darkblue", span = 0.2 ) +
+  scale_y_continuous(label = comma) +
+  theme_minimal() 
+
+```
+
+<br>
+
+
+### What about crime by year and month? {.tabset}
+
+<br>
+
+#### Seasonality
+
+<br>
+
+The daily count view is useful, but it might help if we make two changes:  
+
+   +  First, we should break it down by year and month. This adjustment corrects for the seasonality of crime. One way to show this seasonal variation in crime incidents is to plot the monthly incidents for each year. Note that for `r format(Sys.time(), '%Y')`, the line stops the month before `r format(Sys.time(), '%B')`, as that is the last month of complete data from the portal.  
+
+   +  Second, we should adjust the counts to be *rates* of incidents of crime. This will adjust for differences in the population of Phoenix from 2016-`r format(Sys.time(), '%Y')`. The crime incident rate is calculated as the count of crimes divided by the population size, then multiplied by 100,000. This then tells us how many incidents of crime occur per 100,000 people in the population.  
+   
+<br>
+
+```{r, echo=FALSE, eval=TRUE}
+
+monthly.crime.rate.by.year %>% 
+  ggseasonplot(
+    year.labels=FALSE,
+    main = "Plot of Monthly Crime Rate by Years for Phoenix",
+    col = rainbow( dim( crime.rates )[2] ) ) + 
+  scale_y_continuous( label = comma ) +
+  geom_line( size = 1.2 ) +
+  theme_gray() 
+
+```
+
+<br>
+
+The plot showing the monthly rates by year helps us visualize the data better. There are a few important patterns we can take from the plot:  
+
+  + First, the trend for 2020 is *unusual* relative to other years. *Particularly* for the period of March-June. For a more elaborate discussion of this trend, see this [analysis](https://jacobtnyoung.github.io/R2PhX/projects/PHXcrime_types_2020.html).  
+  
+  + Second, relative to past years, more recent criminal incidents tend to be lower. For example, comparing `r format(Sys.time(), '%Y')` to 2016 shows a generally lower rate of crime incidents. 
+
+<br>
+
+#### Reworking the data to monthly incidents (**code**) 
+
+<br>
+
+This takes some reworking of the data.  
+
+  + First, rather than collapsing by day, we want to record counts by month.  
+  
+  + Second, to create the rates, we need to adjust by the population for each year.  
+  + Third, we need to create a `ts()` object. That is, we need to create a time series object using the `ts()` function. We will also use the `ggseasonplot()` from the `forecast` package.
+
+<br>
+
+```{r, echo = TRUE, eval = FALSE}
+
+# Back to dplyr! Let's create an object that is monthly counts and sorted by year. 
+crimes.by.month <- 
+  crime.data %>% 
+  select( year, month ) %>%   
+  filter( year != 2015 ) %>%  
+  filter( !is.na( year ) ) %>% 
+  group_by( year, month ) %>% 
+  summarize( counts = n() ) %>% 
+  spread( year, counts ) %>% 
+  arrange( match( month, month.name ) ) %>% 
+  select( !month )
+
+```
+
+#### Creating rates (**code**)
+
+Let's pull population data from the [Census Bureau](https://www.census.gov/topics/population.html). Specifically, the data for [Arizona](https://www2.census.gov/programs-surveys/popest/tables/2010-2019/cities/totals/SUB-IP-EST2019-ANNRES-04.xlsx). This is an Excel file with estimates of population for incorporated places. Since this is an .xlxs file, we will use the `openxlxs` package.
+
+Let's pull it in and get the data for Phoenix.
+
+```{r, echo = TRUE, eval = TRUE}
+library( openxlsx )
+
+# get the data.
+pop.data <- read.xlsx(
+  "https://www2.census.gov/programs-surveys/popest/tables/2010-2019/cities/totals/SUB-IP-EST2019-ANNRES-04.xlsx",
+  colNames = TRUE,
+  startRow = 4
+)
+
+# Find the row with the data for Phoenix.
+grep("Phoenix", pop.data[,1])
+
+# It is the 55th row in the object. So, we need to pull that row.
+phoenix.pop <-  pop.data[55,]
+phoenix.pop
+
+# Now, we only need the data for 2016-2019.
+phoenix.pop <- phoenix.pop[-c(1:9)]
+phoenix.pop
+
+```
+
+Ok! We have our population data. But, what about years after 2019? These are not reported yet. So, we need to fill that in. We could do this various ways, but for ease, let's just add the difference in growth from 2018 to 2019. 
+
+```{r, echo = TRUE, eval = TRUE}
+
+# Just add the difference for each year until you get the actual demographic data.
+phoenix.pop.2020 <- phoenix.pop[4] + phoenix.pop[4] - phoenix.pop[3]
+phoenix.pop.2021 <- phoenix.pop.2020 + phoenix.pop[4] - phoenix.pop[3]
+phoenix.pop.2022 <- phoenix.pop.2021 + phoenix.pop[4] - phoenix.pop[3]
+phoenix.pop.data <- as.numeric( c( phoenix.pop, phoenix.pop.2020, phoenix.pop.2021, phoenix.pop.2022 ) )
+
+# now, calculate the crime rate. Crime rate is calculated as the count of crimes divided by the population size, then multipled by 100,000.
+
+crime.rates <- as.data.frame( crimes.by.month )
+
+for ( i in 1: dim( crime.rates )[2] ){
+  crime.rates[,i] <- ( crime.rates[,i] / phoenix.pop.data[i] ) * 100000
+}
+
+# Now, lets use the ts() function to create a time series object.
+library( forecast )
+
+monthly.crime.rate.by.year <- ts(
+  matrix( as.matrix( crime.rates ), ncol = 1 ), 
+  start=c( 2016, 1 ), 
+  end=c( as.numeric( tail( names( crime.rates ), n=1 ) ), 12 ), frequency=12
+)
+
+```
+
+
+#### Plotting the data (**code**)
+
+<br>
+
+```{r, echo = TRUE, eval = FALSE}
+
+# Let's take a look using ggseasonplot().
+library( ggplot2 )
+library( forecast )
+
+monthly.crime.rate.by.year %>% 
+  ggseasonplot(
+    year.labels=FALSE,
+    main = "Plot of Monthly Crime Rate by Years for Phoenix",
+    col = rainbow( dim( crime.rates )[2] ) ) + 
+  scale_y_continuous( label = comma ) +
+  geom_line( size = 1.2 ) +
+  theme_gray()
+
+```
+
+###
+
+<br>
+
+### Next steps...  
+
+<br>
+
+Note that these plots represents **all** types of crimes. For a more elaborate discussion of various crime types, check out this [analysis](https://jacobtnyoung.github.io/R2PhX/projects/PHXcrime_types.html).
+
+<br>
+
+<p align="center">
+[Back to R 2 Phoenix page](https://jacobtnyoung.github.io/R2PhX/)
+</p>
+
+<br>
+
+***Please*** report any needed corrections to the [Issues](https://github.com/jacobtnyoung/R2PhX/issues) page. Thanks!
+
+<br><br>
+
+
+###### ***Last updated `r format(Sys.time(), '%d %B, %Y')`***

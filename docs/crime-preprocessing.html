@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+
+
+<title>Pre-Processing Crime Data for Phoenix</title>
+
+<script src="site_libs/header-attrs-2.25/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/simplex.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">Open Criminology Phoenix (OCP)</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">About OCP</a>
+</li>
+<li>
+  <a href="intro.html">Intro to OCP</a>
+</li>
+<li>
+  <a href="crime.html">Crime in Phoenix</a>
+</li>
+<li>
+  <a href="police.html">Policing in Phoenix</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+
+
+<h1 class="title toc-ignore">Pre-Processing Crime Data for Phoenix</h1>
+<h4 class="date">15 August, 2024</h4>
+
+</div>
+
+
+<p><br></p>
+<p>The <a
+href="https://www.phoenixopendata.com/dataset/crime-data">Crime Data</a>
+file from the <a href="https://www.phoenixopendata.com/">data portal</a>
+contains incidents reported to the Phoenix Police Department. The city
+updates the <a
+href="%22https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crime-data_crime-data_crimestat.csv%22">file</a>
+at 11am every day and it contains data beginning November 2015 up to 7
+days before the posting date. Before we do anything with it, we need to
+do some pre-processing. Mainly, cleaning up variables, creating basic
+objects, and incorporating population data to calculate rates.</p>
+<p><br><br></p>
+<div id="setup-and-loading-the-data" class="section level2">
+<h2>Setup and Loading the Data</h2>
+<p><br></p>
+<div id="preparing-the-enviornment" class="section level3">
+<h3>Preparing the enviornment</h3>
+<p>First we need to clear the workspace and load the libraries we are
+going to use.</p>
+<p><br></p>
+<pre class="r"><code># clear workspace
+rm( list = ls() )
+
+
+# load libraries
+library( dplyr )    # used for wrangling the data
+library( tidyr )    # used for wrangling the data
+library( openxlsx ) # for opening an excel file
+library( here )     # for referencing the local directory</code></pre>
+<p><br></p>
+</div>
+<div id="loading-the-data" class="section level3">
+<h3>Loading the data</h3>
+<p>Next we want to load the data and do some cleaning. The data can be
+called directly from the website link, <a
+href="%22https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crime-data_crime-data_crimestat.csv%22">here</a>.
+I prefer to download a copy and load it locally so that if I encounter
+an error when I get a new file, I can keep track of any changes.</p>
+<p><br></p>
+<pre class="r"><code># call the file stored in the local directory
+loc &lt;- &quot;data/data-raw/crime-data_crime-data_crimestat.csv&quot;
+crimeData &lt;- read.csv( here( loc ), as.is = TRUE, header = TRUE )
+crimeData &lt;- na.omit( crimeData )
+
+# clean up the dates
+date.vec &lt;- strptime( crimeData$OCCURRED.ON, format=&quot;%m/%d/%Y %H:%M&quot; )
+crimeData$year   &lt;- format( date.vec, format=&quot;%Y&quot; )
+crimeData$month  &lt;- format( date.vec, format=&quot;%B&quot; )
+crimeData$day365 &lt;- format( date.vec, format=&quot;%j&quot; )
+crimeData$week   &lt;- format( date.vec, format=&quot;%V&quot; )
+
+# drop cases for the most recent month
+crimeData &lt;- crimeData[ ! ( 
+  crimeData$month == format( Sys.Date(), format=&quot;%B&quot; ) &amp;
+    crimeData$year == format( Sys.Date(), format=&quot;%Y&quot; ) 
+) , ]</code></pre>
+<p><br></p>
+</div>
+</div>
+<div id="adjusting-for-population" class="section level2">
+<h2>Adjusting for Population</h2>
+<p>Right now, the <code>crimeData</code> object is a list of incidents.
+When we go to aggregate over months or years, we are going to want to
+adjust based on population differences. In other words, we will want to
+calculate the rates (not just examine raw counts).</p>
+<p>The rates are computed using population data from the <a
+href="https://www.census.gov/topics/population.html">Census Bureau</a>.
+The site lists Excel files with estimates of population for incorporated
+places. Since this is an .xlxs file, we will use the
+<code>openxlxs</code> package (again, click the “Show” button on the
+right to see the code for this section).</p>
+<p>We will work with two files:</p>
+<ul>
+<li><p>Years 2010-2019 for <a
+href="https://www2.census.gov/programs-surveys/popest/tables/2010-2019/cities/totals/SUB-IP-EST2019-ANNRES-04.xlsx">Arizona</a></p></li>
+<li><p>Years 2020-2021 for <a
+href="https://www2.census.gov/programs-surveys/popest/tables/2020-2021/cities/totals/SUB-IP-EST2021-POP-04.xlsx">Arizona</a></p></li>
+</ul>
+<p>Let’s pull these estimates in and get the data for Phoenix.</p>
+<p><br></p>
+<pre class="r"><code># get years 2016-2019
+pop.data.2016.2019 &lt;- read.xlsx(
+  &quot;https://www2.census.gov/programs-surveys/popest/tables/2010-2019/cities/totals/SUB-IP-EST2019-ANNRES-04.xlsx&quot;,
+  colNames = TRUE,
+  startRow = 4
+)
+
+# find the row with the data for Phoenix
+grep(&quot;Phoenix&quot;, pop.data.2016.2019[,1])</code></pre>
+<pre><code>## [1] 55</code></pre>
+<pre class="r"><code># it is the 55th row in the object
+phoenix.pop.2016.2019 &lt;-  pop.data.2016.2019[55,]
+phoenix.pop.2016.2019</code></pre>
+<pre><code>##                       X1  Census Estimates.Base    2010    2011    2012    2013
+## 55 Phoenix city, Arizona 1445632        1446691 1449038 1469796 1499274 1526491
+##       2014    2015    2016    2017    2018    2019
+## 55 1555445 1583690 1612199 1633560 1654675 1680992</code></pre>
+<pre class="r"><code># we only need the data for 2016-2019
+phoenix.pop.2016.2019 &lt;- phoenix.pop.2016.2019[-c(1:9)]
+phoenix.pop.2016.2019</code></pre>
+<pre><code>##       2016    2017    2018    2019
+## 55 1612199 1633560 1654675 1680992</code></pre>
+<pre class="r"><code># repeat these steps for the 2020-2021 data
+pop.data.2020.2021 &lt;- read.xlsx(
+  &quot;https://www2.census.gov/programs-surveys/popest/tables/2020-2021/cities/totals/SUB-IP-EST2021-POP-04.xlsx&quot;,
+  colNames = TRUE,
+  startRow = 4
+)
+
+# find the row with the data for Phoenix (still the 55th)
+grep( &quot;Phoenix&quot;, pop.data.2020.2021[,1] )</code></pre>
+<pre><code>## [1] 55</code></pre>
+<pre class="r"><code>phoenix.pop.2020.2021 &lt;-  pop.data.2020.2021[55,]
+phoenix.pop.2020.2021 &lt;- phoenix.pop.2020.2021[-c(1:2)]
+
+# combine the data into a single object
+phoenix.pop &lt;- cbind( phoenix.pop.2016.2019, phoenix.pop.2020.2021 )
+phoenix.pop</code></pre>
+<pre><code>##       2016    2017    2018    2019    2020    2021
+## 55 1612199 1633560 1654675 1680992 1611345 1624569</code></pre>
+<pre class="r"><code># missing 2022 and 2023 and 2024
+# add the difference for each year until you get the actual demographic data
+phoenix.pop$&quot;2022&quot; &lt;- phoenix.pop$&quot;2021&quot; + phoenix.pop$&quot;2021&quot; - phoenix.pop$&quot;2020&quot;
+phoenix.pop$&quot;2023&quot; &lt;- phoenix.pop$&quot;2022&quot; + phoenix.pop$&quot;2022&quot; - phoenix.pop$&quot;2021&quot;
+phoenix.pop$&quot;2024&quot; &lt;- phoenix.pop$&quot;2023&quot; + phoenix.pop$&quot;2023&quot; - phoenix.pop$&quot;2022&quot;
+
+# now we coerce the data to be numeric to use it below
+phoenix.pop.data &lt;- as.numeric( phoenix.pop )
+phoenix.pop.data</code></pre>
+<pre><code>## [1] 1612199 1633560 1654675 1680992 1611345 1624569 1637793 1651017 1664241</code></pre>
+<p><br></p>
+<p>We now have an object, <code>phoenix.pop.data</code> that is the
+yearly population for Phoenix. Note that the population for 2022-2024 is
+just an estimate, not that reported to the Census Bureau.</p>
+<p><br></p>
+</div>
+<div id="creating-objects" class="section level2">
+<h2>Creating Objects</h2>
+<p><br></p>
+<div id="counts" class="section level3">
+<h3>Counts</h3>
+<p>Now that we have the counts pre-processed and the population data, we
+can build a few objects that we can use for analysis.</p>
+<p><br></p>
+<pre class="r"><code># daily count of crimes
+crimesByDay &lt;- 
+  crimeData %&gt;% 
+  select( year, month, day365 ) %&gt;%   
+  filter( !is.na( day365 ) ) %&gt;% 
+  group_by( year, month, day365 ) %&gt;% 
+  summarize( counts = n() ) %&gt;% 
+  ungroup() %&gt;% 
+  mutate( day.time = seq( 1, length( counts ) ) ) %&gt;% 
+  select( counts, day.time ) %&gt;% 
+  mutate( days = 
+            seq( 
+              as.Date( head( strptime( crimeData$OCCURRED.ON, format=&quot;%m/%d/%Y %H:%M&quot; ) ) )[1], 
+              as.Date( tail( strptime( crimeData$OCCURRED.ON, format=&quot;%m/%d/%Y %H:%M&quot; ) ) )[6], 
+              length.out = length( counts ) ) ) %&gt;% 
+  arrange( day.time )
+crimesByDay &lt;- as.data.frame( crimesByDay )
+
+# monthly count of crimes
+crimesByMonth &lt;- 
+  crimeData %&gt;% 
+  select( year, month ) %&gt;%   
+  filter( year != 2015 ) %&gt;%  
+  filter( !is.na( year ) ) %&gt;% 
+  group_by( year, month ) %&gt;% 
+  summarize( counts = n() ) %&gt;% 
+  spread( year, counts ) %&gt;% 
+  arrange( match( month, month.name ) ) %&gt;% 
+  select( !month )
+
+
+# crimes by year
+crimesByYear &lt;- 
+  crimeData %&gt;% 
+  select( year ) %&gt;%   
+  filter( year != 2015 ) %&gt;%  
+  filter( !is.na( year ) ) %&gt;% 
+  group_by( year ) %&gt;% 
+  summarize( counts = n() ) </code></pre>
+<p><br></p>
+</div>
+<div id="rates" class="section level3">
+<h3>Rates</h3>
+<p>Now we want to create objects that capture the rates.</p>
+<p><br></p>
+<pre class="r"><code># crime rate is calculated as the count of 
+# crimes divided by the population size, then multiplied by 100,000
+
+crimeRatesMonth &lt;- as.data.frame( crimesByMonth )
+
+for ( i in 1: dim( crimeRatesMonth )[2] ){
+  crimeRatesMonth[,i] &lt;- ( crimeRatesMonth[,i] / phoenix.pop.data[i] ) * 100000
+}
+
+# calculate the crime rate by year
+crimeRatesYear &lt;- as.data.frame( crimesByYear )
+
+for ( i in 1: dim( crimeRatesYear )[1] ){
+  crimeRatesYear[i,2] &lt;- ( crimeRatesYear[i,2] / phoenix.pop.data[i] ) * 100000
+}
+
+# rename the counts column to be rates
+crimeRatesYear &lt;- crimeRatesYear %&gt;%  rename( rates = counts )</code></pre>
+<p><br></p>
+</div>
+</div>
+<div id="saving-the-file" class="section level2">
+<h2>Saving the File</h2>
+<p>We can now save the objects as a file that can be referenced for
+analysis on separate pages.</p>
+<p><br></p>
+<pre class="r"><code># save the objects as .rds files
+
+saveRDS( crimeData,       file = here( &quot;data/data-rodeo/crimeData.rds&quot; ) )
+saveRDS( crimesByDay,     file = here( &quot;data/data-rodeo/crimesByDay.rds&quot; ) )
+saveRDS( crimesByMonth,   file = here( &quot;data/data-rodeo/crimesByMonth.rds&quot; ) )
+saveRDS( crimesByYear,    file = here( &quot;data/data-rodeo/crimesByYear.rds&quot; ) )
+saveRDS( crimeRatesMonth, file = here( &quot;data/data-rodeo/crimeRatesMonth.rds&quot; ) )
+saveRDS( crimeRatesYear,  file = here( &quot;data/data-rodeo/crimeRatesYear.rds&quot; ) )</code></pre>
+<p>If you look in the <a
+href="https://jacobtnyoung.github.io/OpenCrimPhx/data/data-rodeo">data-rodeo</a>
+folder for the repository, you will see that these files have been
+added. When I run this script, I have to push these files to the
+repository. But, we can now reference them using the
+<code>readRDS()</code> function.</p>
+<p><br></p>
+</div>
+<div id="next-steps" class="section level2">
+<h2>Next steps…</h2>
+<p>Now that the data are pre-processed, we can reference this object
+when we conduct analyses. Visit the <a
+href="https://jacobtnyoung.github.io/OpenCrimPhx/crime.html">Crime in
+Phoenix)</a> page to see these analyses.</p>
+<div id="section" class="section level3">
+<h3></h3>
+<p><br></p>
+<hr />
+<p align="center">
+<a href="https://jacobtnyoung.github.io/OpenCrimPhx/">Back to Open
+Criminology Phoenix page</a>
+</p>
+<p><br></p>
+<p><strong><em>Please</em></strong> report any needed corrections to the
+<a
+href="https://github.com/jacobtnyoung/OpenCrimPhx/issues/new">Issues</a>
+page. Thanks!</p>
+<p><br><br></p>
+<div id="last-updated-15-august-2024" class="section level6">
+<h6><strong><em>Last updated 15 August, 2024</em></strong></h6>
+</div>
+</div>
+</div>
+
+
+
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

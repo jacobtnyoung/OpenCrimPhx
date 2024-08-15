@@ -4,7 +4,9 @@ title: "Crime in Phoenix"
 
 <br>
 
-*What is going on with crime in Phoenix?*
+##### *What is going on with crime in Phoenix?*
+
+<div style="text-align: justify;">
 
 What do you think? Is crime on the rise? Is crime declining? Having a hard time answering that question (**and** *being confident about your answer*)? Well, you should! I certainly do (and [I am a criminologist](https://jacobtnyoung.github.io/)). But, so are most people. [Gallup polling](https://news.gallup.com/poll/268283/describe-problem-crime-serious.aspx) has consistently shown that individuals' perceptions of crime does not (REPEAT **does not**) track trends in crime.  
 
@@ -22,8 +24,9 @@ This page focuses on analyses that pertain to understanding crime in Phoenix:
 
   * [What is going on with crime in Phoenix? (well, let's look!)](https://jacobtnyoung.github.io/OpenCrimPhx/crime-trends.html)  
   * [(More on) What is going on with crime (**types**) in Phoenix?](https://jacobtnyoung.github.io/OpenCrimPhx/crime-types.html)
+  * [Pre-Processing Crime Data for Phoenix](https://jacobtnyoung.github.io/OpenCrimPhx/crime-preprocessing.html)
 
-
+</div>
 
 <br>
 
