@@ -267,7 +267,7 @@ $(document).ready(function () {
 
 
 <h1 class="title toc-ignore">Pre-Processing Crime Data for Phoenix</h1>
-<h4 class="date">15 August, 2024</h4>
+<h4 class="date">16 August, 2024</h4>
 
 </div>
 
@@ -322,6 +322,20 @@ crimeData$year   &lt;- format( date.vec, format=&quot;%Y&quot; )
 crimeData$month  &lt;- format( date.vec, format=&quot;%B&quot; )
 crimeData$day365 &lt;- format( date.vec, format=&quot;%j&quot; )
 crimeData$week   &lt;- format( date.vec, format=&quot;%V&quot; )
+
+# clean up the variable classifying the cases
+crimeData &lt;- 
+  crimeData %&gt;% 
+  mutate( crime.type = case_when( 
+    UCR.CRIME.CATEGORY == &quot;AGGRAVATED ASSAULT&quot; ~ &quot;Assault&quot;,
+    UCR.CRIME.CATEGORY == &quot;ARSON&quot; ~ &quot;Arson&quot;,
+    UCR.CRIME.CATEGORY == &quot;BURGLARY&quot; ~ &quot;Burglary&quot;,
+    UCR.CRIME.CATEGORY == &quot;DRUG OFFENSE&quot; ~ &quot;Drugs&quot;,
+    UCR.CRIME.CATEGORY == &quot;LARCENY-THEFT&quot; ~ &quot;Theft&quot;,
+    UCR.CRIME.CATEGORY == &quot;MURDER AND NON-NEGLIGENT MANSLAUGHTER&quot; ~ &quot;Homicide&quot;,
+    UCR.CRIME.CATEGORY == &quot;MOTOR VEHICLE THEFT&quot; ~ &quot;MV Theft&quot;,
+    UCR.CRIME.CATEGORY == &quot;RAPE&quot; ~ &quot;Rape&quot;,
+    UCR.CRIME.CATEGORY == &quot;ROBBERY&quot; ~ &quot;Robbery&quot; ) )
 
 # drop cases for the most recent month
 crimeData &lt;- crimeData[ ! ( 
@@ -402,10 +416,16 @@ phoenix.pop$&quot;2024&quot; &lt;- phoenix.pop$&quot;2023&quot; + phoenix.pop$&q
 phoenix.pop.data &lt;- as.numeric( phoenix.pop )
 phoenix.pop.data</code></pre>
 <pre><code>## [1] 1612199 1633560 1654675 1680992 1611345 1624569 1637793 1651017 1664241</code></pre>
+<pre class="r"><code># attach years to the population data
+phoenixPopDat &lt;- data.frame(
+  year = names( phoenix.pop ),
+  population = phoenix.pop.data,
+  stringsAsFactors = FALSE
+)</code></pre>
 <p><br></p>
-<p>We now have an object, <code>phoenix.pop.data</code> that is the
-yearly population for Phoenix. Note that the population for 2022-2024 is
-just an estimate, not that reported to the Census Bureau.</p>
+<p>We now have an object, <code>phoenixPopDat</code> that is the yearly
+population for Phoenix. Note that the population for 2022-2024 is just
+an estimate, not that reported to the Census Bureau.</p>
 <p><br></p>
 </div>
 <div id="creating-objects" class="section level2">
@@ -446,6 +466,18 @@ crimesByMonth &lt;-
   arrange( match( month, month.name ) ) %&gt;% 
   select( !month )
 
+# monthly count of crimes by type
+crimesByTypeByMonth &lt;-
+  crimeData %&gt;% 
+  select( year, month, crime.type ) %&gt;%   
+  filter( year != 2015 ) %&gt;%  
+  filter( !is.na( year ) ) %&gt;% 
+  group_by( year, month, crime.type ) %&gt;% 
+  summarize( counts = n() ) %&gt;% 
+  arrange( match( month, month.name ) ) %&gt;% 
+  select( !month )
+crimesByTypeByMonth$month &lt;-factor( crimesByTypeByMonth$month,levels = month.name )
+crimesByTypeByMonth$month &lt;-factor( month.abb[crimesByTypeByMonth$month],levels = month.abb )
 
 # crimes by year
 crimesByYear &lt;- 
@@ -454,7 +486,16 @@ crimesByYear &lt;-
   filter( year != 2015 ) %&gt;%  
   filter( !is.na( year ) ) %&gt;% 
   group_by( year ) %&gt;% 
-  summarize( counts = n() ) </code></pre>
+  summarize( counts = n() ) 
+
+# yearly count of crimes by type
+crimesByTypeByYear &lt;-
+  crimeData %&gt;% 
+  select( year, crime.type ) %&gt;%   
+  filter( year != 2015 ) %&gt;%  
+  filter( !is.na( year ) ) %&gt;% 
+  group_by( year, crime.type ) %&gt;% 
+  summarize( counts = n() )</code></pre>
 <p><br></p>
 </div>
 <div id="rates" class="section level3">
@@ -464,21 +505,46 @@ crimesByYear &lt;-
 <pre class="r"><code># crime rate is calculated as the count of 
 # crimes divided by the population size, then multiplied by 100,000
 
+# calculate the crime rate by month
 crimeRatesMonth &lt;- as.data.frame( crimesByMonth )
 
 for ( i in 1: dim( crimeRatesMonth )[2] ){
-  crimeRatesMonth[,i] &lt;- ( crimeRatesMonth[,i] / phoenix.pop.data[i] ) * 100000
+  crimeRatesMonth[,i] &lt;- ( crimeRatesMonth[,i] / phoenixPopDat[i,2] ) * 100000
 }
 
 # calculate the crime rate by year
 crimeRatesYear &lt;- as.data.frame( crimesByYear )
 
 for ( i in 1: dim( crimeRatesYear )[1] ){
-  crimeRatesYear[i,2] &lt;- ( crimeRatesYear[i,2] / phoenix.pop.data[i] ) * 100000
+  crimeRatesYear[i,2] &lt;- ( crimeRatesYear[i,2] / phoenixPopDat[i,2] ) * 100000
 }
 
 # rename the counts column to be rates
-crimeRatesYear &lt;- crimeRatesYear %&gt;%  rename( rates = counts )</code></pre>
+crimeRatesYear &lt;- crimeRatesYear %&gt;%  rename( rates = counts )
+
+
+# calculate rates for types by month
+crimeRatesMonthType &lt;- as.data.frame( crimesByTypeByMonth )
+
+# assign the population data
+crimeRatesMonthType &lt;- crimeRatesMonthType %&gt;%
+  left_join( phoenixPopDat, by = &quot;year&quot; )
+
+# create the rates
+crimeRatesMonthType &lt;- crimeRatesMonthType %&gt;% 
+  mutate( rates = ( ( counts / population ) * 100000 ) )
+
+
+# calculate rates for types by year
+crimeRatesYearType &lt;- as.data.frame( crimesByTypeByYear )
+
+# assign the population data
+crimeRatesYearType &lt;- crimeRatesYearType %&gt;%
+  left_join( phoenixPopDat, by = &quot;year&quot; )
+
+# create the rates
+crimeRatesYearType &lt;- crimeRatesYearType %&gt;% 
+  mutate( rates = ( ( counts / population ) * 100000 ) )</code></pre>
 <p><br></p>
 </div>
 </div>
@@ -494,7 +560,13 @@ saveRDS( crimesByDay,     file = here( &quot;data/data-rodeo/crimesByDay.rds&quo
 saveRDS( crimesByMonth,   file = here( &quot;data/data-rodeo/crimesByMonth.rds&quot; ) )
 saveRDS( crimesByYear,    file = here( &quot;data/data-rodeo/crimesByYear.rds&quot; ) )
 saveRDS( crimeRatesMonth, file = here( &quot;data/data-rodeo/crimeRatesMonth.rds&quot; ) )
-saveRDS( crimeRatesYear,  file = here( &quot;data/data-rodeo/crimeRatesYear.rds&quot; ) )</code></pre>
+saveRDS( crimeRatesYear,  file = here( &quot;data/data-rodeo/crimeRatesYear.rds&quot; ) )
+
+# crimes by type
+saveRDS( crimesByTypeByMonth, file = here( &quot;data/data-rodeo/crimesByTypeByMonth.rds&quot; ) )
+saveRDS( crimesByTypeByYear , file = here( &quot;data/data-rodeo/crimesByTypeByYear.rds&quot; ) )
+saveRDS( crimeRatesMonthType, file = here( &quot;data/data-rodeo/crimeRatesMonthType.rds&quot; ) )
+saveRDS( crimeRatesYearType , file = here( &quot;data/data-rodeo/crimeRatesMonthYear.rds&quot; ) )</code></pre>
 <p>If you look in the <a
 href="https://jacobtnyoung.github.io/OpenCrimPhx/data/data-rodeo">data-rodeo</a>
 folder for the repository, you will see that these files have been
@@ -523,8 +595,8 @@ Criminology Phoenix page</a>
 href="https://github.com/jacobtnyoung/OpenCrimPhx/issues/new">Issues</a>
 page. Thanks!</p>
 <p><br><br></p>
-<div id="last-updated-15-august-2024" class="section level6">
-<h6><strong><em>Last updated 15 August, 2024</em></strong></h6>
+<div id="last-updated-16-august-2024" class="section level6">
+<h6><strong><em>Last updated 16 August, 2024</em></strong></h6>
 </div>
 </div>
 </div>

@@ -1,0 +1,64 @@
+
+Now, let's break down the figure above by crime *type*:
+
+<br>
+
+```{r, echo=FALSE, eval=TRUE}
+
+p2 <- crimes.type.by.month %>% 
+  ggplot( aes( month, counts, group = 1 ) ) +
+  geom_point( ) +
+  geom_line( ) +
+  facet_grid( crime.type ~ year, scales="free" ) +
+  theme( axis.text.x=element_blank(), 
+         strip.text.x = element_text( size = 15 ),
+         strip.text.y = element_text( size = 12 ) ) +
+  xlab( "Month" )
+
+p2
+
+```
+
+<br>
+
+#### Plotting the data (**code**)
+
+```{r, echo=TRUE, eval=FALSE}
+p1 <- crimes.by.month %>% 
+  ggplot( aes( month, counts, group = 1 ) ) +
+  geom_point( ) +
+  geom_line( ) +
+  facet_grid( ~ year , scales="free" ) +
+  theme( axis.text.x=element_blank() ) +
+  xlab( "Month" )
+p1
+
+p2 <- crimes.type.by.month %>% 
+  ggplot( aes( month, counts, group = 1 ) ) +
+  geom_point( ) +
+  geom_line( ) +
+  facet_grid( crime.type ~ year, scales="free" ) +
+  theme( axis.text.x=element_blank(), 
+         strip.text.x = element_text( size = 15 ),
+         strip.text.y = element_text( size = 12 ) ) +
+  xlab( "Month" )
+p2
+```
+
+###
+
+<br>
+
+----
+
+<p align="center">
+[Back to Open Criminology Phoenix page](https://jacobtnyoung.github.io/OpenCrimPhx/)
+</p>
+
+<br>
+
+***Please*** report any needed corrections to the [Issues](https://github.com/jacobtnyoung/OpenCrimPhx/issues/new) page. Thanks!
+
+<br><br>
+
+###### ***Last updated `r format(Sys.time(), '%d %B, %Y')`***

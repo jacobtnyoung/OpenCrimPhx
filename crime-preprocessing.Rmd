@@ -69,6 +69,20 @@ crimeData$month  <- format( date.vec, format="%B" )
 crimeData$day365 <- format( date.vec, format="%j" )
 crimeData$week   <- format( date.vec, format="%V" )
 
+# clean up the variable classifying the cases
+crimeData <- 
+  crimeData %>% 
+  mutate( crime.type = case_when( 
+    UCR.CRIME.CATEGORY == "AGGRAVATED ASSAULT" ~ "Assault",
+    UCR.CRIME.CATEGORY == "ARSON" ~ "Arson",
+    UCR.CRIME.CATEGORY == "BURGLARY" ~ "Burglary",
+    UCR.CRIME.CATEGORY == "DRUG OFFENSE" ~ "Drugs",
+    UCR.CRIME.CATEGORY == "LARCENY-THEFT" ~ "Theft",
+    UCR.CRIME.CATEGORY == "MURDER AND NON-NEGLIGENT MANSLAUGHTER" ~ "Homicide",
+    UCR.CRIME.CATEGORY == "MOTOR VEHICLE THEFT" ~ "MV Theft",
+    UCR.CRIME.CATEGORY == "RAPE" ~ "Rape",
+    UCR.CRIME.CATEGORY == "ROBBERY" ~ "Robbery" ) )
+
 # drop cases for the most recent month
 crimeData <- crimeData[ ! ( 
   crimeData$month == format( Sys.Date(), format="%B" ) &
@@ -142,11 +156,19 @@ phoenix.pop$"2024" <- phoenix.pop$"2023" + phoenix.pop$"2023" - phoenix.pop$"202
 phoenix.pop.data <- as.numeric( phoenix.pop )
 phoenix.pop.data
 
+# attach years to the population data
+phoenixPopDat <- data.frame(
+  year = names( phoenix.pop ),
+  population = phoenix.pop.data,
+  stringsAsFactors = FALSE
+)
+
+
 ```
 
 <br>
 
-We now have an object, `phoenix.pop.data` that is the yearly population for Phoenix. Note that the population for 2022-2024 is just an estimate, not that reported to the Census Bureau.
+We now have an object, `phoenixPopDat` that is the yearly population for Phoenix. Note that the population for 2022-2024 is just an estimate, not that reported to the Census Bureau.
 
 <br>
 
@@ -192,6 +214,18 @@ crimesByMonth <-
   arrange( match( month, month.name ) ) %>% 
   select( !month )
 
+# monthly count of crimes by type
+crimesByTypeByMonth <-
+  crimeData %>% 
+  select( year, month, crime.type ) %>%   
+  filter( year != 2015 ) %>%  
+  filter( !is.na( year ) ) %>% 
+  group_by( year, month, crime.type ) %>% 
+  summarize( counts = n() ) %>% 
+  arrange( match( month, month.name ) ) %>% 
+  select( !month )
+crimesByTypeByMonth$month <-factor( crimesByTypeByMonth$month,levels = month.name )
+crimesByTypeByMonth$month <-factor( month.abb[crimesByTypeByMonth$month],levels = month.abb )
 
 # crimes by year
 crimesByYear <- 
@@ -201,6 +235,16 @@ crimesByYear <-
   filter( !is.na( year ) ) %>% 
   group_by( year ) %>% 
   summarize( counts = n() ) 
+
+# yearly count of crimes by type
+crimesByTypeByYear <-
+  crimeData %>% 
+  select( year, crime.type ) %>%   
+  filter( year != 2015 ) %>%  
+  filter( !is.na( year ) ) %>% 
+  group_by( year, crime.type ) %>% 
+  summarize( counts = n() )
+
 
 ```
 
@@ -217,21 +261,46 @@ Now we want to create objects that capture the rates.
 # crime rate is calculated as the count of 
 # crimes divided by the population size, then multiplied by 100,000
 
+# calculate the crime rate by month
 crimeRatesMonth <- as.data.frame( crimesByMonth )
 
 for ( i in 1: dim( crimeRatesMonth )[2] ){
-  crimeRatesMonth[,i] <- ( crimeRatesMonth[,i] / phoenix.pop.data[i] ) * 100000
+  crimeRatesMonth[,i] <- ( crimeRatesMonth[,i] / phoenixPopDat[i,2] ) * 100000
 }
 
 # calculate the crime rate by year
 crimeRatesYear <- as.data.frame( crimesByYear )
 
 for ( i in 1: dim( crimeRatesYear )[1] ){
-  crimeRatesYear[i,2] <- ( crimeRatesYear[i,2] / phoenix.pop.data[i] ) * 100000
+  crimeRatesYear[i,2] <- ( crimeRatesYear[i,2] / phoenixPopDat[i,2] ) * 100000
 }
 
 # rename the counts column to be rates
 crimeRatesYear <- crimeRatesYear %>%  rename( rates = counts )
+
+
+# calculate rates for types by month
+crimeRatesMonthType <- as.data.frame( crimesByTypeByMonth )
+
+# assign the population data
+crimeRatesMonthType <- crimeRatesMonthType %>%
+  left_join( phoenixPopDat, by = "year" )
+
+# create the rates
+crimeRatesMonthType <- crimeRatesMonthType %>% 
+  mutate( rates = ( ( counts / population ) * 100000 ) )
+
+
+# calculate rates for types by year
+crimeRatesYearType <- as.data.frame( crimesByTypeByYear )
+
+# assign the population data
+crimeRatesYearType <- crimeRatesYearType %>%
+  left_join( phoenixPopDat, by = "year" )
+
+# create the rates
+crimeRatesYearType <- crimeRatesYearType %>% 
+  mutate( rates = ( ( counts / population ) * 100000 ) )
 
 ```
 
@@ -253,6 +322,13 @@ saveRDS( crimesByMonth,   file = here( "data/data-rodeo/crimesByMonth.rds" ) )
 saveRDS( crimesByYear,    file = here( "data/data-rodeo/crimesByYear.rds" ) )
 saveRDS( crimeRatesMonth, file = here( "data/data-rodeo/crimeRatesMonth.rds" ) )
 saveRDS( crimeRatesYear,  file = here( "data/data-rodeo/crimeRatesYear.rds" ) )
+
+# crimes by type
+saveRDS( crimesByTypeByMonth, file = here( "data/data-rodeo/crimesByTypeByMonth.rds" ) )
+saveRDS( crimesByTypeByYear , file = here( "data/data-rodeo/crimesByTypeByYear.rds" ) )
+saveRDS( crimeRatesMonthType, file = here( "data/data-rodeo/crimeRatesMonthType.rds" ) )
+saveRDS( crimeRatesYearType , file = here( "data/data-rodeo/crimeRatesMonthYear.rds" ) )
+
 
 
 ```
