@@ -13,7 +13,7 @@
 
 <title>(More on) What is going on with crime (types) in Phoenix?</title>
 
-<script src="site_libs/header-attrs-2.25/header-attrs.js"></script>
+<script src="site_libs/header-attrs-2.23/header-attrs.js"></script>
 <script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="site_libs/bootstrap-3.3.5/css/simplex.min.css" rel="stylesheet" />
@@ -30,6 +30,7 @@
        code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
        pre:not([class]) { background-color: white }</style>
 <script src="site_libs/navigation-1.1/tabsets.js"></script>
+<script src="site_libs/navigation-1.1/codefolding.js"></script>
 <link href="site_libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
 <script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
 
@@ -216,6 +217,9 @@ $(document).ready(function () {
 </style>
 
 <!-- code folding -->
+<style type="text/css">
+.code-folding-btn { margin-bottom: 4px; }
+</style>
 
 
 
@@ -264,131 +268,81 @@ $(document).ready(function () {
 
 <div id="header">
 
+<div class="btn-group pull-right float-right">
+<button type="button" class="btn btn-default btn-xs btn-secondary btn-sm dropdown-toggle" data-toggle="dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span>Code</span> <span class="caret"></span></button>
+<ul class="dropdown-menu dropdown-menu-right" style="min-width: 50px;">
+<li><a id="rmd-show-all-code" href="#">Show All Code</a></li>
+<li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li>
+</ul>
+</div>
+
 
 
 <h1 class="title toc-ignore">(More on) What is going on with crime
 (types) in Phoenix?</h1>
-<h4 class="date">15 August, 2024</h4>
+<h4 class="date">17 August, 2024</h4>
 
 </div>
 
 
-<p><br></p>
-<p>In a separate post, I discuss what is currently going on with <a
-href="https://jacobtnyoung.github.io/R2PhX/projects/PHXcrime_trends.html">crime
-in Phoenix</a>.</p>
-<p>Here, I want to urther unpack the trends by focusing on crime
-types.</p>
-<p><em>Note: as with other posts, just click the tab to see the
-code</em>…</p>
+<p>On the <a
+href="https://jacobtnyoung.github.io/OpenCrimPhx/crime-trends.html">What
+is going on with crime in Phoenix?</a> page, I gave a rough overview of
+trends in crime in Phoenix from 2016 to the present. Here we want to dig
+a bit deeper and examine trends in <strong>types</strong> of crime
+during the same period.</p>
+<p>To examine these questions, we will use data that has pre-processed
+from the <a href="https://www.phoenixopendata.com/">data portal</a>. For
+details, see the <a
+href="https://jacobtnyoung.github.io/OpenCrimPhx/crime-preprocessing.html">Pre-Processing
+Crime Data for Phoenix</a> page.</p>
 <p><br><br></p>
-<div id="monthly-counts-over-the-years" class="section level3 tabset">
-<h3 class="tabset">Monthly Counts over the Years</h3>
-<p><br></p>
-<div id="section" class="section level4">
-<h4></h4>
-<p><br></p>
-<p>Let’s pull the most recent data for <strong>crime incidents</strong>
-from the site.</p>
-<p>The data are reported as UCR crime classifications and have
-geographic information (block address, zip) as well as the date and time
-of the incident. As of August, 2024, there were 553,399 crime incidents
-with complete data from 11/2015 to within a week of the current
-date.</p>
-<p>Let’s start by looking at the monthly count of incidents over all
-crime types.</p>
-<p><br></p>
-<p><img src="crime-types_files/figure-html/unnamed-chunk-2-1.png" width="1152" /></p>
-<p>Now, let’s break down the figure above by crime <em>type</em>:</p>
-<p><br></p>
-<p><img src="crime-types_files/figure-html/unnamed-chunk-3-1.png" width="1152" /></p>
-<p><br></p>
-</div>
-<div id="getting-the-data-code" class="section level4">
-<h4>Getting the data (<strong>code</strong>)</h4>
-<pre class="r"><code>library( dplyr )
-library( tidyr )
-library( ggplot2 )
-library( forecast )
-library( gridExtra )
+<div id="setup" class="section level2">
+<h2>Setup</h2>
+<p>To get going, we will load all the libraries we need. The code to
+generate everything you see here is hidden (to reduce clutter). But, if
+you want to see “how we get there”, just click the “Show” button on the
+right.</p>
+<p>Next, we will load the data. These files are available in the <a
+href="https://jacobtnyoung.github.io/OpenCrimPhx/data">data</a> folder
+for the repository. You can load them directly from there if you prefer.
+However, I will load them from my local files.</p>
+<pre class="r"><code># clear workspace
+rm( list = ls() )
 
-# Get the data.
-url &lt;- &quot;https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crime-data_crime-data_crimestat.csv&quot;
-crime.data &lt;- read.csv( url, as.is = TRUE, header = TRUE )
-crime.data &lt;- na.omit( crime.data )
+# load libraries
+library( dplyr )     # used for wrangling the data
+library( tidyr )     # used for wrangling the data
+library( ggplot2 )   # for plotting
+library( scales )    # for formatting the text
+library( forecast )  # for working with time series data
+library( here )      # for referencing the local directory
+library( gridExtra ) # for paneling multiple plots
 
-# Clean up the dates.
-date.vec &lt;- strptime( crime.data$OCCURRED.ON, format=&quot;%m/%d/%Y %H:%M&quot; )
-crime.data$year   &lt;- format( date.vec, format=&quot;%Y&quot; )
-crime.data$month  &lt;- format( date.vec, format=&quot;%B&quot; )
+# define the objects
+crimeData       &lt;- readRDS( here( &quot;data/crimeData.rds&quot; ) )
+crimesByDay     &lt;- readRDS( here( &quot;data/crimesByDay.rds&quot; ) )
+crimesByMonth   &lt;- readRDS( here( &quot;data/crimesByMonth.rds&quot; ) )
+crimesByYear    &lt;- readRDS( here( &quot;data/crimesByYear.rds&quot; ) )
+crimeRatesMonth &lt;- readRDS( here( &quot;data/crimeRatesMonth.rds&quot; ) )
+crimeRatesYear  &lt;- readRDS( here( &quot;data/crimeRatesYear.rds&quot; ) )
 
-# Drop cases for the most recent month.
-crime.data &lt;- crime.data[ ! ( 
-  crime.data$month == format( Sys.Date(), format=&quot;%B&quot; ) &amp;
-  crime.data$year == format( Sys.Date(), format=&quot;%Y&quot; ) 
-  ) , ]
-
-# Crimes by month.
-crimes.by.month &lt;-
-  crime.data %&gt;% 
-  select( year, month ) %&gt;%   
-  filter( year != 2015 ) %&gt;%
-  filter( !is.na( year ) ) %&gt;% 
-  group_by( year, month ) %&gt;% 
-  summarize( counts = n() ) %&gt;% 
-  arrange( match( month, month.name ) ) 
-crimes.by.month$month &lt;-factor( crimes.by.month$month,levels = month.name )
-crimes.by.month$month &lt;-factor( month.abb[crimes.by.month$month],levels = month.abb )
-
-# Create crimes by type by month object.
-crimes.type.by.month &lt;-
-  crime.data %&gt;% 
-  select( year, month, UCR.CRIME.CATEGORY ) %&gt;%   
-  filter( year != 2015 ) %&gt;%  
-  filter( !is.na( year ) ) %&gt;% 
-  group_by( year, month, UCR.CRIME.CATEGORY ) %&gt;% 
-  summarize( counts = n() ) %&gt;% 
-  arrange( match( month, month.name ) ) %&gt;% 
-  select( !month ) %&gt;% 
-  mutate(crime.type = case_when(
-    UCR.CRIME.CATEGORY == &quot;AGGRAVATED ASSAULT&quot; ~ &quot;Assault&quot;,
-    UCR.CRIME.CATEGORY == &quot;ARSON&quot; ~ &quot;Arson&quot;,
-    UCR.CRIME.CATEGORY == &quot;BURGLARY&quot; ~ &quot;Burglary&quot;,
-    UCR.CRIME.CATEGORY == &quot;DRUG OFFENSE&quot; ~ &quot;Drugs&quot;,
-    UCR.CRIME.CATEGORY == &quot;LARCENY-THEFT&quot; ~ &quot;Theft&quot;,
-    UCR.CRIME.CATEGORY == &quot;MURDER AND NON-NEGLIGENT MANSLAUGHTER&quot; ~ &quot;Homicide&quot;,
-    UCR.CRIME.CATEGORY == &quot;MOTOR VEHICLE THEFT&quot; ~ &quot;MV Theft&quot;,
-    UCR.CRIME.CATEGORY == &quot;RAPE&quot; ~ &quot;Rape&quot;,
-    UCR.CRIME.CATEGORY == &quot;ROBBERY&quot; ~ &quot;Robbery&quot; ) )
-crimes.type.by.month$month &lt;-factor( crimes.type.by.month$month,levels = month.name )
-crimes.type.by.month$month &lt;-factor( month.abb[crimes.type.by.month$month],levels = month.abb )</code></pre>
+crimeRatesMonthType  &lt;- readRDS( here( &quot;data/crimeRatesMonthType.rds&quot; ) )</code></pre>
 <p><br></p>
-</div>
-<div id="plotting-the-data-code" class="section level4">
-<h4>Plotting the data (<strong>code</strong>)</h4>
-<pre class="r"><code>p1 &lt;- crimes.by.month %&gt;% 
-  ggplot( aes( month, counts, group = 1 ) ) +
-  geom_point( ) +
-  geom_line( ) +
-  facet_grid( ~ year , scales=&quot;free&quot; ) +
-  theme( axis.text.x=element_blank() ) +
-  xlab( &quot;Month&quot; )
-p1
-
-p2 &lt;- crimes.type.by.month %&gt;% 
-  ggplot( aes( month, counts, group = 1 ) ) +
-  geom_point( ) +
-  geom_line( ) +
+<div id="monthly-trends-in-types-of-crime-from-2016-to-present"
+class="section level3">
+<h3>Monthly Trends in Types of Crime from 2016 to Present</h3>
+<p><br></p>
+<pre class="r"><code>crimeRatesMonthType %&gt;% 
+  ggplot( aes( month, rates, group = 1 ) ) +
+  geom_line( color = &quot;grey40&quot; ) +
+  geom_point( alpha = 2/5, color = &quot;#751913&quot; ) +
   facet_grid( crime.type ~ year, scales=&quot;free&quot; ) +
   theme( axis.text.x=element_blank(), 
          strip.text.x = element_text( size = 15 ),
          strip.text.y = element_text( size = 12 ) ) +
-  xlab( &quot;Month&quot; )
-p2</code></pre>
-</div>
-</div>
-<div id="section-1" class="section level3">
-<h3></h3>
+  xlab( &quot;Month&quot; )</code></pre>
+<p><img src="crime-types_files/figure-html/unnamed-chunk-2-1.png" width="1152" /></p>
 <p><br></p>
 <hr />
 <p align="center">
@@ -401,8 +355,9 @@ Criminology Phoenix page</a>
 href="https://github.com/jacobtnyoung/OpenCrimPhx/issues/new">Issues</a>
 page. Thanks!</p>
 <p><br><br></p>
-<div id="last-updated-15-august-2024" class="section level6">
-<h6><strong><em>Last updated 15 August, 2024</em></strong></h6>
+<div id="last-updated-17-august-2024" class="section level6">
+<h6><strong><em>Last updated 17 August, 2024</em></strong></h6>
+</div>
 </div>
 </div>
 
@@ -439,6 +394,11 @@ $(document).ready(function () {
 </script>
 
 <!-- code folding -->
+<script>
+$(document).ready(function () {
+  window.initializeCodeFolding("hide" === "show");
+});
+</script>
 
 
 <!-- dynamically load mathjax for compatibility with self-contained -->

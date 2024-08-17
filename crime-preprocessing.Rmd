@@ -51,15 +51,15 @@ library( here )     # for referencing the local directory
 
 ### Loading the data
 
-Next we want to load the data and do some cleaning. The data can be called directly from the website link, [here]("https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crime-data_crime-data_crimestat.csv"). I prefer to download a copy and load it locally so that if I encounter an error when I get a new file, I can keep track of any changes.
+Next we want to load the data and do some cleaning. The data can be called directly from the website link, [here]("https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crime-data_crime-data_crimestat.csv"). 
 
 <br>
 
 ```{r, results="hide"}
 
-# call the file stored in the local directory
-loc <- "data/data-raw/crime-data_crime-data_crimestat.csv"
-crimeData <- read.csv( here( loc ), as.is = TRUE, header = TRUE )
+# Get the data.
+url <- "https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crime-data_crime-data_crimestat.csv"
+crimeData <- read.csv( url, as.is = TRUE, header = TRUE )
 crimeData <- na.omit( crimeData )
 
 # clean up the dates
@@ -316,24 +316,24 @@ We can now save the objects as a file that can be referenced for analysis on sep
 
 # save the objects as .rds files
 
-saveRDS( crimeData,       file = here( "data/data-rodeo/crimeData.rds" ) )
-saveRDS( crimesByDay,     file = here( "data/data-rodeo/crimesByDay.rds" ) )
-saveRDS( crimesByMonth,   file = here( "data/data-rodeo/crimesByMonth.rds" ) )
-saveRDS( crimesByYear,    file = here( "data/data-rodeo/crimesByYear.rds" ) )
-saveRDS( crimeRatesMonth, file = here( "data/data-rodeo/crimeRatesMonth.rds" ) )
-saveRDS( crimeRatesYear,  file = here( "data/data-rodeo/crimeRatesYear.rds" ) )
+saveRDS( crimeData,       file = here( "data/crimeData.rds" ) )
+saveRDS( crimesByDay,     file = here( "data/crimesByDay.rds" ) )
+saveRDS( crimesByMonth,   file = here( "data/crimesByMonth.rds" ) )
+saveRDS( crimesByYear,    file = here( "data/crimesByYear.rds" ) )
+saveRDS( crimeRatesMonth, file = here( "data/crimeRatesMonth.rds" ) )
+saveRDS( crimeRatesYear,  file = here( "data/crimeRatesYear.rds" ) )
 
 # crimes by type
-saveRDS( crimesByTypeByMonth, file = here( "data/data-rodeo/crimesByTypeByMonth.rds" ) )
-saveRDS( crimesByTypeByYear , file = here( "data/data-rodeo/crimesByTypeByYear.rds" ) )
-saveRDS( crimeRatesMonthType, file = here( "data/data-rodeo/crimeRatesMonthType.rds" ) )
-saveRDS( crimeRatesYearType , file = here( "data/data-rodeo/crimeRatesMonthYear.rds" ) )
+saveRDS( crimesByTypeByMonth, file = here( "data/crimesByTypeByMonth.rds" ) )
+saveRDS( crimesByTypeByYear , file = here( "data/crimesByTypeByYear.rds" ) )
+saveRDS( crimeRatesMonthType, file = here( "data/crimeRatesMonthType.rds" ) )
+saveRDS( crimeRatesYearType , file = here( "data/crimeRatesMonthYear.rds" ) )
 
 
 
 ```
 
-If you look in the [data-rodeo](https://jacobtnyoung.github.io/OpenCrimPhx/data/data-rodeo) folder for the repository, you will see that these files have been added. When I run this script, I have to push these files to the repository. But, we can now reference them using the `readRDS()` function.
+If you look in the [data](https://jacobtnyoung.github.io/OpenCrimPhx/data) folder for the repository, you will see that these files have been added. When I run this script, I have to push these files to the repository. But, we can now reference them using the `readRDS()` function.
 
 <br>
 

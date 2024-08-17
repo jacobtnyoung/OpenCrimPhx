@@ -10,7 +10,7 @@ title: "Crime in Phoenix"
 
 What do you think? Is crime on the rise? Is crime declining? Having a hard time answering that question (**and** *being confident about your answer*)? Well, you should! I certainly do (and [I am a criminologist](https://jacobtnyoung.github.io/)). But, so are most people. [Gallup polling](https://news.gallup.com/poll/268283/describe-problem-crime-serious.aspx) has consistently shown that individuals' perceptions of crime does not (REPEAT **does not**) track trends in crime.  
 
-Crime trends are **very** difficult to assess, without seeing the data, because of the peculiar nature of crime. 
+Crime trends are **very** difficult to assess without seeing the data, because of the peculiar nature of crime. 
 
   * First, crime is very concentrated in specific geographic areas and exposure to crime and victimization is disproportionately concentrated among groups. If you are fortunate enough to not experience victimization, then your assessment of the frequency of events probably comes from hearsay or media accounts. These are both "*biased*" accounts in the sense that they do not reflect representative cases of crime. In other words, we tend to hear about things that happen and don't really hear about when things don't happen.  
 
@@ -23,7 +23,6 @@ Crime trends are **very** difficult to assess, without seeing the data, because 
 This page focuses on analyses that pertain to understanding crime in Phoenix:  
 
   * [What is going on with crime in Phoenix? (well, let's look!)](https://jacobtnyoung.github.io/OpenCrimPhx/crime-trends.html)  
-  * [(More on) What is going on with crime (**types**) in Phoenix?](https://jacobtnyoung.github.io/OpenCrimPhx/crime-types.html)
   * [Pre-Processing Crime Data for Phoenix](https://jacobtnyoung.github.io/OpenCrimPhx/crime-preprocessing.html)
 
 </div>

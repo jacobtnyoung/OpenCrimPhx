@@ -13,7 +13,7 @@
 
 <title>Pre-Processing Crime Data for Phoenix</title>
 
-<script src="site_libs/header-attrs-2.25/header-attrs.js"></script>
+<script src="site_libs/header-attrs-2.23/header-attrs.js"></script>
 <script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="site_libs/bootstrap-3.3.5/css/simplex.min.css" rel="stylesheet" />
@@ -267,7 +267,7 @@ $(document).ready(function () {
 
 
 <h1 class="title toc-ignore">Pre-Processing Crime Data for Phoenix</h1>
-<h4 class="date">16 August, 2024</h4>
+<h4 class="date">17 August, 2024</h4>
 
 </div>
 
@@ -307,13 +307,11 @@ library( here )     # for referencing the local directory</code></pre>
 <h3>Loading the data</h3>
 <p>Next we want to load the data and do some cleaning. The data can be
 called directly from the website link, <a
-href="%22https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crime-data_crime-data_crimestat.csv%22">here</a>.
-I prefer to download a copy and load it locally so that if I encounter
-an error when I get a new file, I can keep track of any changes.</p>
+href="%22https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crime-data_crime-data_crimestat.csv%22">here</a>.</p>
 <p><br></p>
-<pre class="r"><code># call the file stored in the local directory
-loc &lt;- &quot;data/data-raw/crime-data_crime-data_crimestat.csv&quot;
-crimeData &lt;- read.csv( here( loc ), as.is = TRUE, header = TRUE )
+<pre class="r"><code># Get the data.
+url &lt;- &quot;https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crime-data_crime-data_crimestat.csv&quot;
+crimeData &lt;- read.csv( url, as.is = TRUE, header = TRUE )
 crimeData &lt;- na.omit( crimeData )
 
 # clean up the dates
@@ -555,24 +553,23 @@ analysis on separate pages.</p>
 <p><br></p>
 <pre class="r"><code># save the objects as .rds files
 
-saveRDS( crimeData,       file = here( &quot;data/data-rodeo/crimeData.rds&quot; ) )
-saveRDS( crimesByDay,     file = here( &quot;data/data-rodeo/crimesByDay.rds&quot; ) )
-saveRDS( crimesByMonth,   file = here( &quot;data/data-rodeo/crimesByMonth.rds&quot; ) )
-saveRDS( crimesByYear,    file = here( &quot;data/data-rodeo/crimesByYear.rds&quot; ) )
-saveRDS( crimeRatesMonth, file = here( &quot;data/data-rodeo/crimeRatesMonth.rds&quot; ) )
-saveRDS( crimeRatesYear,  file = here( &quot;data/data-rodeo/crimeRatesYear.rds&quot; ) )
+saveRDS( crimeData,       file = here( &quot;data/crimeData.rds&quot; ) )
+saveRDS( crimesByDay,     file = here( &quot;data/crimesByDay.rds&quot; ) )
+saveRDS( crimesByMonth,   file = here( &quot;data/crimesByMonth.rds&quot; ) )
+saveRDS( crimesByYear,    file = here( &quot;data/crimesByYear.rds&quot; ) )
+saveRDS( crimeRatesMonth, file = here( &quot;data/crimeRatesMonth.rds&quot; ) )
+saveRDS( crimeRatesYear,  file = here( &quot;data/crimeRatesYear.rds&quot; ) )
 
 # crimes by type
-saveRDS( crimesByTypeByMonth, file = here( &quot;data/data-rodeo/crimesByTypeByMonth.rds&quot; ) )
-saveRDS( crimesByTypeByYear , file = here( &quot;data/data-rodeo/crimesByTypeByYear.rds&quot; ) )
-saveRDS( crimeRatesMonthType, file = here( &quot;data/data-rodeo/crimeRatesMonthType.rds&quot; ) )
-saveRDS( crimeRatesYearType , file = here( &quot;data/data-rodeo/crimeRatesMonthYear.rds&quot; ) )</code></pre>
+saveRDS( crimesByTypeByMonth, file = here( &quot;data/crimesByTypeByMonth.rds&quot; ) )
+saveRDS( crimesByTypeByYear , file = here( &quot;data/crimesByTypeByYear.rds&quot; ) )
+saveRDS( crimeRatesMonthType, file = here( &quot;data/crimeRatesMonthType.rds&quot; ) )
+saveRDS( crimeRatesYearType , file = here( &quot;data/crimeRatesMonthYear.rds&quot; ) )</code></pre>
 <p>If you look in the <a
-href="https://jacobtnyoung.github.io/OpenCrimPhx/data/data-rodeo">data-rodeo</a>
-folder for the repository, you will see that these files have been
-added. When I run this script, I have to push these files to the
-repository. But, we can now reference them using the
-<code>readRDS()</code> function.</p>
+href="https://jacobtnyoung.github.io/OpenCrimPhx/data">data</a> folder
+for the repository, you will see that these files have been added. When
+I run this script, I have to push these files to the repository. But, we
+can now reference them using the <code>readRDS()</code> function.</p>
 <p><br></p>
 </div>
 <div id="next-steps" class="section level2">
@@ -595,8 +592,8 @@ Criminology Phoenix page</a>
 href="https://github.com/jacobtnyoung/OpenCrimPhx/issues/new">Issues</a>
 page. Thanks!</p>
 <p><br><br></p>
-<div id="last-updated-16-august-2024" class="section level6">
-<h6><strong><em>Last updated 16 August, 2024</em></strong></h6>
+<div id="last-updated-17-august-2024" class="section level6">
+<h6><strong><em>Last updated 17 August, 2024</em></strong></h6>
 </div>
 </div>
 </div>

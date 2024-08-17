@@ -35,7 +35,7 @@ To examine these questions, we will use data that has pre-processed from the [da
 
 To get going, we will load all the libraries we need. The code to generate everything you see here is hidden (to reduce clutter). But, if you want to see “how we get there”, just click the “Show” button on the right. 
 
-Next, we will load the data. These files are available in the [data-rodeo](https://jacobtnyoung.github.io/OpenCrimPhx/data/data-rodeo) folder for the repository. You can load them directly from there if you prefer. However, I will load them from my local files.
+Next, we will load the data. These files are available in the [data](https://jacobtnyoung.github.io/OpenCrimPhx/data/data) folder for the repository.
 
 
 ```{r}
@@ -53,12 +53,14 @@ library( here )     # for referencing the local directory
 
 
 # define the objects
-crimeData       <- readRDS( here( "data/data-rodeo/crimeData.rds" ) )
-crimesByDay     <- readRDS( here( "data/data-rodeo/crimesByDay.rds" ) )
-crimesByMonth   <- readRDS( here( "data/data-rodeo/crimesByMonth.rds" ) )
-crimesByYear    <- readRDS( here( "data/data-rodeo/crimesByYear.rds" ) )
-crimeRatesMonth <- readRDS( here( "data/data-rodeo/crimeRatesMonth.rds" ) )
-crimeRatesYear  <- readRDS( here( "data/data-rodeo/crimeRatesYear.rds" ) )
+crimeData       <- readRDS( here( "data/crimeData.rds" ) )
+crimesByDay     <- readRDS( here( "data/crimesByDay.rds" ) )
+crimesByMonth   <- readRDS( here( "data/crimesByMonth.rds" ) )
+crimesByYear    <- readRDS( here( "data/crimesByYear.rds" ) )
+crimeRatesMonth <- readRDS( here( "data/crimeRatesMonth.rds" ) )
+crimeRatesYear  <- readRDS( here( "data/crimeRatesYear.rds" ) )
+
+crimeRatesMonthType  <- readRDS( here( "data/crimeRatesMonthType.rds" ) )
 
 ```
 
@@ -156,11 +158,31 @@ crimeRatesYear %>%
 
 <br>
 
-### Next steps...  
+----
 
 <br>
 
-Note that these plots represents **all** types of crimes. For a more elaborate discussion of various crime types, check out this [analysis](https://jacobtnyoung.github.io/OpenCrimPhx/crime-types.html).
+## Types of Crime
+
+<br>
+
+### Rates of Crime by Type of Crime and Month from 2016 to Present
+
+<br>
+
+```{r}
+
+crimeRatesMonthType %>% 
+  ggplot( aes( month, rates, group = 1 ) ) +
+  geom_line( color = "grey40" ) +
+  geom_point( alpha = 2/5, color = "#751913" ) +
+  facet_grid( crime.type ~ year, scales="free" ) +
+  theme( axis.text.x=element_blank(), 
+         strip.text.x = element_text( size = 15 ),
+         strip.text.y = element_text( size = 12 ) ) +
+  xlab( "Month" )
+
+```
 
 <br>
 
