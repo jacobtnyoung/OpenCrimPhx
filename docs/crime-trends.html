@@ -285,6 +285,7 @@ Phoenix?</h1>
 </div>
 
 
+<p><br></p>
 <p>If we want to know what is going on with crime in Phoenix, we can
 take a look at the <a
 href="https://www.phoenixopendata.com/dataset/crime-data">Crime Data</a>
@@ -429,6 +430,46 @@ class="section level4">
     theme_minimal() </code></pre>
 <p><img src="crime-trends_files/figure-html/unnamed-chunk-4-1.png" width="1152" /></p>
 <p><br></p>
+</div>
+<div
+id="rates-of-crime-by-year-from-2016-to-present-with-predicted-trend"
+class="section level4">
+<h4>Rates of Crime by Year from 2016 to Present with Predicted
+Trend</h4>
+<pre class="r"><code># Fit an ARIMA model with seasonal components
+fit &lt;- auto.arima( 
+  monthlyCrimeRateByYear, 
+  seasonal = TRUE, 
+  stepwise = FALSE, 
+  approximation = FALSE 
+  )
+
+# Forecast the next 12 months
+forecasted_values &lt;- forecast( fit, h = 12 )
+
+# Convert time series to a data frame for ggplot
+actual_data &lt;- data.frame(
+  ds = time( monthlyCrimeRateByYear ),
+  y = as.numeric( monthlyCrimeRateByYear )
+)
+forecast_data &lt;- data.frame(
+  ds = time( forecasted_values$mean ),
+  yhat = as.numeric( forecasted_values$mean ),
+  lower = as.numeric( forecasted_values$lower[,2] ),
+  upper = as.numeric( forecasted_values$upper[,2] )
+)
+
+# Plot the actual data and forecast using ggplot2
+ggplot() +
+  geom_line( data = actual_data, aes(x = ds, y = y), color = &quot;grey40&quot;) +  # Actual data
+  geom_line( data = forecast_data, aes(x = ds, y = yhat), color = &quot;#c41104&quot;, linetype = &quot;dashed&quot;) +  # Forecasted data
+  geom_ribbon(data = forecast_data, aes(x = ds, ymin = lower, ymax = upper), alpha = 0.2) +  # Confidence interval
+  labs( title = &quot;Plot of Monthly Crime Rate by Years for Phoenix, AZ with Predicted Trend&quot;,
+       x = &quot;Date&quot;,
+       y = &quot;Crime Count&quot; ) +
+  theme_minimal()</code></pre>
+<p><img src="crime-trends_files/figure-html/unnamed-chunk-5-1.png" width="1152" /></p>
+<p><br></p>
 <hr />
 <p><br></p>
 </div>
@@ -450,7 +491,7 @@ class="section level3">
          strip.text.x = element_text( size = 15 ),
          strip.text.y = element_text( size = 12 ) ) +
   xlab( &quot;Month&quot; )</code></pre>
-<p><img src="crime-trends_files/figure-html/unnamed-chunk-5-1.png" width="1152" /></p>
+<p><img src="crime-trends_files/figure-html/unnamed-chunk-6-1.png" width="1152" /></p>
 <p><br></p>
 <hr />
 <p align="center">

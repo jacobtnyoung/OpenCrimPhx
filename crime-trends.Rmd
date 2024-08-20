@@ -18,6 +18,7 @@ knitr::opts_chunk$set( echo = TRUE,
 
 ```
 
+<br>
 
 If we want to know what is going on with crime in Phoenix, we can take a look at the [Crime Data](https://www.phoenixopendata.com/dataset/crime-data) from the [data portal](https://www.phoenixopendata.com/). This file contains incidents reported to the Phoenix Police Department. The city updates the file at 11am every day and it contains data beginning November 2015 up to 7 days before the posting date. With these data we can examine basic trends in crime in Phoenix. 
 
@@ -159,6 +160,46 @@ crimeRatesYear %>%
 
 <br>
 
+#### Rates of Crime by Year from 2016 to Present with Predicted Trend
+
+```{r}
+
+# Fit an ARIMA model with seasonal components
+fit <- auto.arima( 
+  monthlyCrimeRateByYear, 
+  seasonal = TRUE, 
+  stepwise = FALSE, 
+  approximation = FALSE 
+  )
+
+# Forecast the next 12 months
+forecasted_values <- forecast( fit, h = 12 )
+
+# Convert time series to a data frame for ggplot
+actual_data <- data.frame(
+  ds = time( monthlyCrimeRateByYear ),
+  y = as.numeric( monthlyCrimeRateByYear )
+)
+forecast_data <- data.frame(
+  ds = time( forecasted_values$mean ),
+  yhat = as.numeric( forecasted_values$mean ),
+  lower = as.numeric( forecasted_values$lower[,2] ),
+  upper = as.numeric( forecasted_values$upper[,2] )
+)
+
+# Plot the actual data and forecast using ggplot2
+ggplot() +
+  geom_line( data = actual_data, aes(x = ds, y = y), color = "grey40") +  # Actual data
+  geom_line( data = forecast_data, aes(x = ds, y = yhat), color = "#c41104", linetype = "dashed") +  # Forecasted data
+  geom_ribbon(data = forecast_data, aes(x = ds, ymin = lower, ymax = upper), alpha = 0.2) +  # Confidence interval
+  labs( title = "Plot of Monthly Crime Rate by Years for Phoenix, AZ with Predicted Trend",
+       x = "Date",
+       y = "Crime Count" ) +
+  theme_minimal()
+
+```
+
+<br>
 ----
 
 <br>
