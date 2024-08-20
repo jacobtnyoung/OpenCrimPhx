@@ -26,6 +26,7 @@ This page will focus on the following questions:
   * What is the daily trend in crime?
   * What is the monthly trend in crime?
   * What is the yearly trend in crime?
+  * What is the monthly and yearly trends in types of crime?
 
 To examine these questions, we will use data that has pre-processed from the [data portal](https://www.phoenixopendata.com/). For details, see the [Pre-Processing Crime Data for Phoenix](https://jacobtnyoung.github.io/OpenCrimPhx/crime-preprocessing.html) page.
 
