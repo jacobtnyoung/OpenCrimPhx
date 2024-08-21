@@ -1,0 +1,225 @@
+---
+title: "Crime and Unemployment"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+        theme: simplex 
+        code_folding: hide
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set( echo = TRUE, 
+                      message = FALSE, 
+                      warning = FALSE, 
+                      eval = TRUE,
+                      fig.width = 12, 
+                      fig.height = 10 )
+
+```
+
+<br>
+
+?
+
+<br><br>
+
+## Setup
+
+To get going, we will load all the libraries we need. The code to generate everything you see here is hidden (to reduce clutter). But, if you want to see “how we get there”, just click the “Show” button on the right. 
+
+Next, we will load the data. These files are available in the [data](https://jacobtnyoung.github.io/OpenCrimPhx/data/data) folder for the repository.
+
+
+```{r}
+
+# clear workspace
+rm( list = ls() )
+
+# load libraries
+library( dplyr )    # used for wrangling the data
+library( tidyr )    # used for wrangling the data
+library( ggplot2 )  # for plotting
+library( scales )   # for formatting the text
+library( forecast ) # for working with time series data
+library( here )     # for referencing the local directory
+
+
+# define the objects
+crimeData       <- readRDS( here( "data/crimeData.rds" ) )
+crimesByDay     <- readRDS( here( "data/crimesByDay.rds" ) )
+crimesByMonth   <- readRDS( here( "data/crimesByMonth.rds" ) )
+crimesByYear    <- readRDS( here( "data/crimesByYear.rds" ) )
+crimeRatesMonth <- readRDS( here( "data/crimeRatesMonth.rds" ) )
+crimeRatesYear  <- readRDS( here( "data/crimeRatesYear.rds" ) )
+
+crimeRatesMonthType  <- readRDS( here( "data/crimeRatesMonthType.rds" ) )
+
+```
+
+<br>
+
+```{r}
+
+# create a time series object for plotting
+monthlyCrimeRateByYear <- ts(
+  matrix( as.matrix( crimeRatesMonth ), ncol = 1 ), 
+  start=c( 2016, 1 ), 
+  end=c( as.numeric( tail( names( crimeRatesMonth ), n=1 ) ), 12 ), frequency=12
+)
+
+# render the plot
+monthlyCrimeRateByYear %>% 
+  ggseasonplot(
+    year.labels = TRUE,
+    continuous = FALSE,
+    main = "Plot of Monthly Crime Rate by Years for Phoenix, AZ",
+    col = colorRampPalette(c("#f7968f", "#c41104"))( dim( crimeRatesMonth )[2] ) ) + 
+  scale_y_continuous( label = comma ) +
+  geom_line( size = 1.2 ) +
+  theme_minimal() 
+
+```
+
+<br>
+
+Next we need to load the unemployment data.
+
+```{r}
+
+library( blscrapeR )
+
+series_id <- "LAUMT043806000000003"
+
+unemployment_data <- bls_api( 
+  series_id, 
+  startyear = head( names( crimeRatesMonth ), n=1 ), 
+  endyear = tail( names( crimeRatesMonth ), n=1 )
+  )
+
+UnemployByMonth <- 
+  unemployment_data %>% 
+  select( year, periodName, value) %>%
+  mutate( month = factor( unemployment_data$periodName,levels = month.name ) ) %>% 
+  select( !periodName ) %>% 
+  group_by( year, month ) %>% 
+  spread( year, value ) %>% 
+  select( !month )
+
+# HERE: need to think about how to link this now with the crime data
+# probably take a look at how to build a data file with two time series
+
+
+```
+
+
+<br>
+
+The plot showing the monthly rates by year helps us visualize the data better. Note that the current year, `r format( Sys.Date(), format="%Y" )`, is missing a label because the year is incomplete.
+
+<br>
+
+#### Rates of Crime by Year from 2016 to Present
+
+<br>
+
+```{r}
+
+crimeRatesYear %>%
+  # drop the current year because it distorts the graph
+  filter( year != as.numeric( format( Sys.Date(), format="%Y" ) ) ) %>%
+    ggplot( aes( year, rates, group = 1 ) ) +
+    geom_line( color = "grey20", size = 1.2 ) +
+    geom_point( color = "firebrick", size = 4 ) +
+    labs( x = "", y = "Rate of Crime per Year" ) + 
+    ggtitle( "Plot of Crime Rate by Year in Phoenix, AZ" ) +
+    scale_y_continuous( label = comma ) +
+    theme_minimal() 
+ 
+
+```
+
+<br>
+
+#### Rates of Crime by Year from 2016 to Present with Predicted Trend
+
+```{r}
+
+# Fit an ARIMA model with seasonal components
+fit <- auto.arima( 
+  monthlyCrimeRateByYear, 
+  seasonal = TRUE, 
+  stepwise = FALSE, 
+  approximation = FALSE 
+  )
+
+# Forecast the next 12 months
+forecasted_values <- forecast( fit, h = 12 )
+
+# Convert time series to a data frame for ggplot
+actual_data <- data.frame(
+  ds = time( monthlyCrimeRateByYear ),
+  y = as.numeric( monthlyCrimeRateByYear )
+)
+forecast_data <- data.frame(
+  ds = time( forecasted_values$mean ),
+  yhat = as.numeric( forecasted_values$mean ),
+  lower = as.numeric( forecasted_values$lower[,2] ),
+  upper = as.numeric( forecasted_values$upper[,2] )
+)
+
+# Plot the actual data and forecast using ggplot2
+ggplot() +
+  geom_line( data = actual_data, aes(x = ds, y = y), color = "grey40") +  # Actual data
+  geom_line( data = forecast_data, aes(x = ds, y = yhat), color = "#c41104", linetype = "dashed") +  # Forecasted data
+  geom_ribbon(data = forecast_data, aes(x = ds, ymin = lower, ymax = upper), alpha = 0.2) +  # Confidence interval
+  labs( title = "Plot of Monthly Crime Rate by Years for Phoenix, AZ with Predicted Trend",
+       x = "Date",
+       y = "Crime Count" ) +
+  theme_minimal()
+
+```
+
+<br>
+
+----
+
+<br>
+
+## Types of Crime
+
+<br>
+
+### Rates of Crime by Type of Crime and Month from 2016 to Present
+
+<br>
+
+```{r}
+
+crimeRatesMonthType %>% 
+  ggplot( aes( month, rates, group = 1 ) ) +
+  geom_line( color = "grey40" ) +
+  geom_point( alpha = 2/5, color = "#751913" ) +
+  facet_grid( crime.type ~ year, scales="free" ) +
+  theme( axis.text.x=element_blank(), 
+         strip.text.x = element_text( size = 15 ),
+         strip.text.y = element_text( size = 12 ) ) +
+  xlab( "Month" )
+
+```
+
+<br>
+
+----
+
+<p align="center">
+[Back to Open Criminology Phoenix page](https://jacobtnyoung.github.io/OpenCrimPhx/)
+</p>
+
+<br>
+
+***Please*** report any needed corrections to the [Issues](https://github.com/jacobtnyoung/OpenCrimPhx/issues/new) page. Thanks!
+
+<br><br>
+
+###### ***Last updated `r format(Sys.time(), '%d %B, %Y')`***
