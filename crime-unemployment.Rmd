@@ -40,6 +40,7 @@ rm( list = ls() )
 library( dplyr )    # used for wrangling the data
 library( tidyr )    # used for wrangling the data
 library( ggplot2 )  # for plotting
+library( cowplot )  # for putting the plots together
 library( scales )   # for formatting the text
 library( forecast ) # for working with time series data
 library( here )     # for referencing the local directory
@@ -79,6 +80,7 @@ monthlyCrimeRateByYear %>%
   geom_line( size = 1.2 ) +
   theme_minimal() 
 
+
 ```
 
 <br>
@@ -104,10 +106,40 @@ UnemployByMonth <-
   select( !periodName ) %>% 
   group_by( year, month ) %>% 
   spread( year, value ) %>% 
+  ungroup() %>% 
   select( !month )
 
-# HERE: need to think about how to link this now with the crime data
-# probably take a look at how to build a data file with two time series
+# create a time series object for plotting
+monthlyUnemploymentRateByYear <- ts(
+  matrix( as.matrix( UnemployByMonth ), ncol = 1 ), 
+  start=c( 2016, 1 ), 
+  end=c( as.numeric( tail( names( UnemployByMonth ), n=1 ) ), 12 ), frequency=12
+)
+
+
+# render the plot
+crime_seasonplot <- monthlyCrimeRateByYear %>% 
+  ggseasonplot( 
+    year.labels = TRUE,
+    continuous = FALSE,
+    main = "Plot of Monthly Crime Rate by Years for Phoenix, AZ",
+    col = colorRampPalette(c("#f7968f", "#c41104"))( dim( crimeRatesMonth )[2] ) ) + 
+  scale_y_continuous( label = comma ) +
+  geom_line( size = 1.2 ) +
+  theme_minimal() 
+
+unemployment_seasonplot <- monthlyUnemploymentRateByYear %>% 
+  ggseasonplot( 
+    year.labels = TRUE,
+    continuous = FALSE,
+    main = "Plot of Monthly Crime Rate by Years for Phoenix, AZ",
+    col = colorRampPalette(c("#f7968f", "#c41104"))( dim( UnemployByMonth )[2] ) ) + 
+  scale_y_continuous( label = comma ) +
+  geom_line( size = 1.2 ) +
+  theme_minimal() 
+
+combined_plot <- plot_grid( crime_seasonplot, unemployment_seasonplot, ncol = 1 )
+print( combined_plot )
 
 
 ```
@@ -116,28 +148,6 @@ UnemployByMonth <-
 <br>
 
 The plot showing the monthly rates by year helps us visualize the data better. Note that the current year, `r format( Sys.Date(), format="%Y" )`, is missing a label because the year is incomplete.
-
-<br>
-
-#### Rates of Crime by Year from 2016 to Present
-
-<br>
-
-```{r}
-
-crimeRatesYear %>%
-  # drop the current year because it distorts the graph
-  filter( year != as.numeric( format( Sys.Date(), format="%Y" ) ) ) %>%
-    ggplot( aes( year, rates, group = 1 ) ) +
-    geom_line( color = "grey20", size = 1.2 ) +
-    geom_point( color = "firebrick", size = 4 ) +
-    labs( x = "", y = "Rate of Crime per Year" ) + 
-    ggtitle( "Plot of Crime Rate by Year in Phoenix, AZ" ) +
-    scale_y_continuous( label = comma ) +
-    theme_minimal() 
- 
-
-```
 
 <br>
 
