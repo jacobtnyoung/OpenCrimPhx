@@ -80,7 +80,6 @@ monthlyCrimeRateByYear %>%
   geom_line( size = 1.2 ) +
   theme_minimal() 
 
-
 ```
 
 <br>
@@ -116,6 +115,22 @@ monthlyUnemploymentRateByYear <- ts(
   end=c( as.numeric( tail( names( UnemployByMonth ), n=1 ) ), 12 ), frequency=12
 )
 
+# plot the rates
+monthlyUnemploymentRateByYear %>% 
+  ggseasonplot( 
+    year.labels = TRUE,
+    continuous = FALSE,
+    main = "Plot of Monthly Unemployment Rate by Years for Phoenix, AZ",
+    col = colorRampPalette(c("#f7968f", "#c41104"))( dim( UnemployByMonth )[2] ) ) + 
+  scale_y_continuous( label = comma ) +
+  geom_line( size = 1.2 ) +
+  theme_minimal() 
+
+```
+
+Now, we can plot them both together.
+
+```{r}
 
 # render the plot
 crime_seasonplot <- monthlyCrimeRateByYear %>% 
@@ -132,7 +147,7 @@ unemployment_seasonplot <- monthlyUnemploymentRateByYear %>%
   ggseasonplot( 
     year.labels = TRUE,
     continuous = FALSE,
-    main = "Plot of Monthly Crime Rate by Years for Phoenix, AZ",
+    main = "Plot of Monthly Unemployment Rate by Years for Phoenix, AZ",
     col = colorRampPalette(c("#f7968f", "#c41104"))( dim( UnemployByMonth )[2] ) ) + 
   scale_y_continuous( label = comma ) +
   geom_line( size = 1.2 ) +
@@ -144,79 +159,52 @@ print( combined_plot )
 
 ```
 
-
-<br>
-
-The plot showing the monthly rates by year helps us visualize the data better. Note that the current year, `r format( Sys.Date(), format="%Y" )`, is missing a label because the year is incomplete.
-
-<br>
-
-#### Rates of Crime by Year from 2016 to Present with Predicted Trend
+Plot both together over time.
 
 ```{r}
 
-# Fit an ARIMA model with seasonal components
-fit <- auto.arima( 
-  monthlyCrimeRateByYear, 
-  seasonal = TRUE, 
-  stepwise = FALSE, 
-  approximation = FALSE 
-  )
-
-# Forecast the next 12 months
-forecasted_values <- forecast( fit, h = 12 )
-
-# Convert time series to a data frame for ggplot
 actual_data <- data.frame(
-  ds = time( monthlyCrimeRateByYear ),
-  y = as.numeric( monthlyCrimeRateByYear )
-)
-forecast_data <- data.frame(
-  ds = time( forecasted_values$mean ),
-  yhat = as.numeric( forecasted_values$mean ),
-  lower = as.numeric( forecasted_values$lower[,2] ),
-  upper = as.numeric( forecasted_values$upper[,2] )
+    dsCrime = time( monthlyCrimeRateByYear ),
+    yCrime = as.numeric( monthlyCrimeRateByYear ),
+    dsUnemp = time( monthlyUnemploymentRateByYear ),
+    yUnemp = as.numeric( monthlyUnemploymentRateByYear )
 )
 
-# Plot the actual data and forecast using ggplot2
-ggplot() +
-  geom_line( data = actual_data, aes(x = ds, y = y), color = "grey40") +  # Actual data
-  geom_line( data = forecast_data, aes(x = ds, y = yhat), color = "#c41104", linetype = "dashed") +  # Forecasted data
-  geom_ribbon(data = forecast_data, aes(x = ds, ymin = lower, ymax = upper), alpha = 0.2) +  # Confidence interval
-  labs( title = "Plot of Monthly Crime Rate by Years for Phoenix, AZ with Predicted Trend",
-       x = "Date",
-       y = "Crime Count" ) +
+crime_plot <- ggplot() +
+  geom_line( data = actual_data, aes(x = dsCrime, y = yCrime), color = "grey40") +
   theme_minimal()
 
+unemp_plot <- ggplot() +
+  geom_line( data = actual_data, aes(x = dsUnemp, y = yUnemp), color = "grey40") +
+  theme_minimal()
+
+
+combined_plot <- plot_grid( crime_plot, unemp_plot, ncol = 1 )
+print( combined_plot )
+
 ```
-
-<br>
-
-----
-
-<br>
-
-## Types of Crime
-
-<br>
-
-### Rates of Crime by Type of Crime and Month from 2016 to Present
-
-<br>
 
 ```{r}
 
-crimeRatesMonthType %>% 
-  ggplot( aes( month, rates, group = 1 ) ) +
-  geom_line( color = "grey40" ) +
-  geom_point( alpha = 2/5, color = "#751913" ) +
-  facet_grid( crime.type ~ year, scales="free" ) +
-  theme( axis.text.x=element_blank(), 
-         strip.text.x = element_text( size = 15 ),
-         strip.text.y = element_text( size = 12 ) ) +
-  xlab( "Month" )
+library(MTS)
+
+# Combine the time series into a matrix
+combined_data <- cbind( monthlyCrimeRateByYear, monthlyUnemploymentRateByYear )
+combined_data <- na.omit( combined_data )
+
+# Fit a VARIMA model
+varima_model <- VARMA( combined_data, p = 1, q = 1 )  # p and q are the lag orders
+
+# Print the model summary
+summary( varima_model )
+
+# Forecasting using the VARIMA model
+forecasts <- VARMApred( varima_model, h = 10 )  # h is the forecast horizon
+print(forecasts$pred)
 
 ```
+
+<br>
 
 <br>
 
