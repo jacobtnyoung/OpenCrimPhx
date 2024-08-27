@@ -11,7 +11,7 @@
 
 
 
-<title>Crime in Phoenix</title>
+<title>Crime and Unemployment</title>
 
 <script src="site_libs/header-attrs-2.23/header-attrs.js"></script>
 <script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
@@ -30,6 +30,7 @@
        code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
        pre:not([class]) { background-color: white }</style>
 <script src="site_libs/navigation-1.1/tabsets.js"></script>
+<script src="site_libs/navigation-1.1/codefolding.js"></script>
 <link href="site_libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
 <script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
 
@@ -216,6 +217,9 @@ $(document).ready(function () {
 </style>
 
 <!-- code folding -->
+<style type="text/css">
+.code-folding-btn { margin-bottom: 4px; }
+</style>
 
 
 
@@ -264,68 +268,178 @@ $(document).ready(function () {
 
 <div id="header">
 
+<div class="btn-group pull-right float-right">
+<button type="button" class="btn btn-default btn-xs btn-secondary btn-sm dropdown-toggle" data-toggle="dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span>Code</span> <span class="caret"></span></button>
+<ul class="dropdown-menu dropdown-menu-right" style="min-width: 50px;">
+<li><a id="rmd-show-all-code" href="#">Show All Code</a></li>
+<li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li>
+</ul>
+</div>
 
 
-<h1 class="title toc-ignore">Crime in Phoenix</h1>
+
+<h1 class="title toc-ignore">Crime and Unemployment</h1>
+<h4 class="date">27 August, 2024</h4>
 
 </div>
 
 
 <p><br></p>
-<div id="what-is-going-on-with-crime-in-phoenix" class="section level5">
-<h5><em>What is going on with crime in Phoenix?</em></h5>
-<div style="text-align: justify;">
-<p>What do you think? Is crime on the rise? Is crime declining? Having a
-hard time answering that question (<strong>and</strong> <em>being
-confident about your answer</em>)? Well, you should! I certainly do (and
-<a href="https://jacobtnyoung.github.io/">I am a criminologist</a>).
-But, so are most people. <a
-href="https://news.gallup.com/poll/268283/describe-problem-crime-serious.aspx">Gallup
-polling</a> has consistently shown that individuals’ perceptions of
-crime does not (REPEAT <strong>does not</strong>) track trends in
-crime.</p>
-<p>Crime trends are <strong>very</strong> difficult to assess without
-seeing the data, because of the peculiar nature of crime.</p>
-<ul>
-<li><p>First, crime is very concentrated in specific geographic areas
-and exposure to crime and victimization is disproportionately
-concentrated among groups. If you are fortunate enough to not experience
-victimization, then your assessment of the frequency of events probably
-comes from hearsay or media accounts. These are both “<em>biased</em>”
-accounts in the sense that they do not reflect representative cases of
-crime. In other words, we tend to hear about things that happen and
-don’t really hear about when things don’t happen.</p></li>
-<li><p>Second, when individuals do experience victimization, they tend
-to overestimate the prevalence of crime. This makes intuitive sense, but
-makes it difficult to assess the actual prevalence of crime.</p></li>
-<li><p>Third, we measure crime very poorly. There is often a large time
-gap between when crime happens and when those data are compiled into
-annual reports of crime.</p></li>
-</ul>
+<p>The relationship between crime and unemployment has long been of
+interest to scholars as well as those outside of academia.</p>
+<p>This page takes a look at trends in unemployment using data from the
+<a href="https://www.bls.gov/">Bureau of Labor Statistics</a> as well as
+the open data portal.</p>
+<p><br><br></p>
+<div id="setup" class="section level2">
+<h2>Setup</h2>
+<p>To get going, we will load all the libraries we need. The code to
+generate everything you see here is hidden (to reduce clutter). But, if
+you want to see “how we get there”, just click the “Show” button on the
+right.</p>
+<p>Next, we will load the data. These files are available in the <a
+href="https://jacobtnyoung.github.io/OpenCrimPhx/data/data">data</a>
+folder for the repository.</p>
+<pre class="r"><code># clear workspace
+rm( list = ls() )
+
+# load libraries
+library( dplyr )    # used for wrangling the data
+library( tidyr )    # used for wrangling the data
+library( ggplot2 )  # for plotting
+library( cowplot )  # for putting the plots together
+library( scales )   # for formatting the text
+library( forecast ) # for working with time series data
+library( here )     # for referencing the local directory
+
+
+# define the objects
+crimeData       &lt;- readRDS( here( &quot;data/crimeData.rds&quot; ) )
+crimesByDay     &lt;- readRDS( here( &quot;data/crimesByDay.rds&quot; ) )
+crimesByMonth   &lt;- readRDS( here( &quot;data/crimesByMonth.rds&quot; ) )
+crimesByYear    &lt;- readRDS( here( &quot;data/crimesByYear.rds&quot; ) )
+crimeRatesMonth &lt;- readRDS( here( &quot;data/crimeRatesMonth.rds&quot; ) )
+crimeRatesYear  &lt;- readRDS( here( &quot;data/crimeRatesYear.rds&quot; ) )
+
+crimeRatesMonthType  &lt;- readRDS( here( &quot;data/crimeRatesMonthType.rds&quot; ) )</code></pre>
 <p><br></p>
-<p>This page focuses on analyses that pertain to understanding crime in
-Phoenix:</p>
-<ul>
-<li><a
-href="https://jacobtnyoung.github.io/OpenCrimPhx/crime-trends.html">What
-is going on with crime in Phoenix? (well, let’s look!)</a><br />
-</li>
-<li><a
-href="https://jacobtnyoung.github.io/OpenCrimPhx/crime-unemployment.html">Is
-there a relationship between crime and unemployment?)</a><br />
-</li>
-<li><a
-href="https://jacobtnyoung.github.io/OpenCrimPhx/crime-preprocessing.html">Pre-processing
-crime data for Phoenix</a></li>
-</ul>
-</div>
+<p>First, load the unemployment data. This makes a call to the <a
+href="https://www.bls.gov/">Bureau of Labor Statistics</a> API.</p>
+<pre class="r"><code>library( blscrapeR )
+
+series_id &lt;- &quot;LAUMT043806000000003&quot;
+
+unemployment_data &lt;- bls_api( 
+  series_id, 
+  startyear = head( names( crimeRatesMonth ), n=1 ), 
+  endyear = tail( names( crimeRatesMonth ), n=1 )
+  )
+
+UnemployByMonth &lt;- 
+  unemployment_data %&gt;% 
+  select( year, periodName, value) %&gt;%
+  mutate( month = factor( unemployment_data$periodName,levels = month.name ) ) %&gt;% 
+  select( !periodName ) %&gt;% 
+  group_by( year, month ) %&gt;% 
+  spread( year, value ) %&gt;% 
+  ungroup() %&gt;% 
+  select( !month )
+
+# create a time series object for plotting
+monthlyUnemploymentRateByYear &lt;- ts(
+  matrix( as.matrix( UnemployByMonth ), ncol = 1 ), 
+  start=c( 2016, 1 ), 
+  end=c( as.numeric( tail( names( UnemployByMonth ), n=1 ) ), 12 ), frequency=12
+)
+
+# plot the rates
+monthlyUnemploymentRateByYear %&gt;% 
+  ggseasonplot( 
+    year.labels = TRUE,
+    continuous = FALSE,
+    main = &quot;Plot of Monthly Unemployment Rate by Years for Phoenix, AZ&quot;,
+    col = colorRampPalette(c(&quot;#f7968f&quot;, &quot;#c41104&quot;))( dim( UnemployByMonth )[2] ) ) + 
+  scale_y_continuous( label = comma ) +
+  geom_line( size = 1.2 ) +
+  theme_minimal() </code></pre>
+<p><img src="crime-unemployment_files/figure-html/unnamed-chunk-2-1.png" width="1152" /></p>
+<p>Now, we can plot unemployment with crime.</p>
+<pre class="r"><code># create a time series object for plotting
+monthlyCrimeRateByYear &lt;- ts(
+  matrix( as.matrix( crimeRatesMonth ), ncol = 1 ), 
+  start=c( 2016, 1 ), 
+  end=c( as.numeric( tail( names( crimeRatesMonth ), n=1 ) ), 12 ), frequency=12
+)
+
+# render the plot
+crime_seasonplot &lt;- monthlyCrimeRateByYear %&gt;% 
+  ggseasonplot( 
+    year.labels = TRUE,
+    continuous = FALSE,
+    main = &quot;Plot of Monthly Crime Rate by Years for Phoenix, AZ&quot;,
+    col = colorRampPalette(c(&quot;#f7968f&quot;, &quot;#c41104&quot;))( dim( crimeRatesMonth )[2] ) ) + 
+  scale_y_continuous( label = comma ) +
+  geom_line( size = 1.2 ) +
+  theme_minimal() 
+
+unemployment_seasonplot &lt;- monthlyUnemploymentRateByYear %&gt;% 
+  ggseasonplot( 
+    year.labels = TRUE,
+    continuous = FALSE,
+    main = &quot;Plot of Monthly Unemployment Rate by Years for Phoenix, AZ&quot;,
+    col = colorRampPalette(c(&quot;#f7968f&quot;, &quot;#c41104&quot;))( dim( UnemployByMonth )[2] ) ) + 
+  scale_y_continuous( label = comma ) +
+  geom_line( size = 1.2 ) +
+  theme_minimal() 
+
+combined_plot &lt;- plot_grid( unemployment_seasonplot, crime_seasonplot, ncol = 1 )
+print( combined_plot )</code></pre>
+<p><img src="crime-unemployment_files/figure-html/unnamed-chunk-3-1.png" width="1152" /></p>
+<p><br></p>
+<p>We can rework these to show the trends over time (rather than having
+time stacked).</p>
+<pre class="r"><code>actual_data &lt;- data.frame(
+    dsCrime = time( monthlyCrimeRateByYear ),
+    yCrime = as.numeric( monthlyCrimeRateByYear ),
+    dsUnemp = time( monthlyUnemploymentRateByYear ),
+    yUnemp = as.numeric( monthlyUnemploymentRateByYear )
+)
+
+crime_plot &lt;- ggplot() +
+  geom_line( data = actual_data, aes( x = dsCrime, y = yCrime ), color = &quot;#c41104&quot; ) +
+  labs( x = &quot;Year&quot;, y = &quot;Crime Rate&quot;, color = &quot;Crime Rate&quot; ) +
+  theme_minimal()
+
+unemp_plot &lt;- ggplot() +
+  geom_line( data = actual_data, aes( x = dsUnemp, y = yUnemp ), color = &quot;#c41104&quot; ) +
+  labs( x = &quot;Year&quot;, y = &quot;Unemployment Rate&quot;, color = &quot;Unemployment Rate&quot; ) +
+  theme_minimal()
+
+
+combined_plot &lt;- plot_grid( unemp_plot, crime_plot, ncol = 1 )
+print( combined_plot )</code></pre>
+<p><img src="crime-unemployment_files/figure-html/unnamed-chunk-4-1.png" width="1152" /></p>
+<p><br></p>
+<p>Now we can examine the correlation between the two, which is
+0.204.</p>
+<pre class="r"><code># calculate the ccf
+unemp_crime_ccf &lt;- ccf( actual_data$yUnemp, actual_data$yCrime )</code></pre>
+<p><br></p>
 <p><br></p>
 <hr />
+<p align="center">
+<a href="https://jacobtnyoung.github.io/OpenCrimPhx/">Back to Open
+Criminology Phoenix page</a>
+</p>
+<p><br></p>
 <p><strong><em>Please</em></strong> report any needed corrections to the
 <a
 href="https://github.com/jacobtnyoung/OpenCrimPhx/issues/new">Issues</a>
 page. Thanks!</p>
-<p><br></p>
+<p><br><br></p>
+<div id="last-updated-27-august-2024" class="section level6">
+<h6><strong><em>Last updated 27 August, 2024</em></strong></h6>
+</div>
 </div>
 
 
@@ -361,6 +475,11 @@ $(document).ready(function () {
 </script>
 
 <!-- code folding -->
+<script>
+$(document).ready(function () {
+  window.initializeCodeFolding("hide" === "show");
+});
+</script>
 
 
 <!-- dynamically load mathjax for compatibility with self-contained -->

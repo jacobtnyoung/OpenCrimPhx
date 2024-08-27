@@ -20,7 +20,9 @@ knitr::opts_chunk$set( echo = TRUE,
 
 <br>
 
-?
+The relationship between crime and unemployment has long been of interest to scholars as well as those outside of academia.
+
+This page takes a look at trends in unemployment using data from the [Bureau of Labor Statistics](https://www.bls.gov/) as well as the open data portal. 
 
 <br><br>
 
@@ -60,31 +62,7 @@ crimeRatesMonthType  <- readRDS( here( "data/crimeRatesMonthType.rds" ) )
 
 <br>
 
-```{r}
-
-# create a time series object for plotting
-monthlyCrimeRateByYear <- ts(
-  matrix( as.matrix( crimeRatesMonth ), ncol = 1 ), 
-  start=c( 2016, 1 ), 
-  end=c( as.numeric( tail( names( crimeRatesMonth ), n=1 ) ), 12 ), frequency=12
-)
-
-# render the plot
-monthlyCrimeRateByYear %>% 
-  ggseasonplot(
-    year.labels = TRUE,
-    continuous = FALSE,
-    main = "Plot of Monthly Crime Rate by Years for Phoenix, AZ",
-    col = colorRampPalette(c("#f7968f", "#c41104"))( dim( crimeRatesMonth )[2] ) ) + 
-  scale_y_continuous( label = comma ) +
-  geom_line( size = 1.2 ) +
-  theme_minimal() 
-
-```
-
-<br>
-
-Next we need to load the unemployment data.
+First, load the unemployment data. This makes a call to the [Bureau of Labor Statistics](https://www.bls.gov/) API.
 
 ```{r}
 
@@ -128,9 +106,16 @@ monthlyUnemploymentRateByYear %>%
 
 ```
 
-Now, we can plot them both together.
+Now, we can plot unemployment with crime.
 
 ```{r}
+
+# create a time series object for plotting
+monthlyCrimeRateByYear <- ts(
+  matrix( as.matrix( crimeRatesMonth ), ncol = 1 ), 
+  start=c( 2016, 1 ), 
+  end=c( as.numeric( tail( names( crimeRatesMonth ), n=1 ) ), 12 ), frequency=12
+)
 
 # render the plot
 crime_seasonplot <- monthlyCrimeRateByYear %>% 
@@ -153,13 +138,15 @@ unemployment_seasonplot <- monthlyUnemploymentRateByYear %>%
   geom_line( size = 1.2 ) +
   theme_minimal() 
 
-combined_plot <- plot_grid( crime_seasonplot, unemployment_seasonplot, ncol = 1 )
+combined_plot <- plot_grid( unemployment_seasonplot, crime_seasonplot, ncol = 1 )
 print( combined_plot )
 
 
 ```
 
-Plot both together over time.
+<br>
+
+We can rework these to show the trends over time (rather than having time stacked).
 
 ```{r}
 
@@ -171,36 +158,29 @@ actual_data <- data.frame(
 )
 
 crime_plot <- ggplot() +
-  geom_line( data = actual_data, aes(x = dsCrime, y = yCrime), color = "grey40") +
+  geom_line( data = actual_data, aes( x = dsCrime, y = yCrime ), color = "#c41104" ) +
+  labs( x = "Year", y = "Crime Rate", color = "Crime Rate" ) +
   theme_minimal()
 
 unemp_plot <- ggplot() +
-  geom_line( data = actual_data, aes(x = dsUnemp, y = yUnemp), color = "grey40") +
+  geom_line( data = actual_data, aes( x = dsUnemp, y = yUnemp ), color = "#c41104" ) +
+  labs( x = "Year", y = "Unemployment Rate", color = "Unemployment Rate" ) +
   theme_minimal()
 
 
-combined_plot <- plot_grid( crime_plot, unemp_plot, ncol = 1 )
+combined_plot <- plot_grid( unemp_plot, crime_plot, ncol = 1 )
 print( combined_plot )
 
 ```
 
-```{r}
+<br>
 
-library(MTS)
+Now we can examine the correlation between the two, which is `r round( cor( actual_data$yUnemp, actual_data$yCrime, use = "complete.obs" ), 3 )`.
 
-# Combine the time series into a matrix
-combined_data <- cbind( monthlyCrimeRateByYear, monthlyUnemploymentRateByYear )
-combined_data <- na.omit( combined_data )
+```{r, eval = FALSE}
 
-# Fit a VARIMA model
-varima_model <- VARMA( combined_data, p = 1, q = 1 )  # p and q are the lag orders
-
-# Print the model summary
-summary( varima_model )
-
-# Forecasting using the VARIMA model
-forecasts <- VARMApred( varima_model, h = 10 )  # h is the forecast horizon
-print(forecasts$pred)
+# calculate the ccf
+unemp_crime_ccf <- ccf( actual_data$yUnemp, actual_data$yCrime )
 
 ```
 
