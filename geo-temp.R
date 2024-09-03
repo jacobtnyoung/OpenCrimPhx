@@ -156,14 +156,7 @@ results2 <- results
 results$INC.NUMBER <- crimeData2016$INC.NUMBER
 
 
-! the problem you run into here is duplicate ids
-Need to go to the top and make sure you are dropping the duplicate
-ids before you run this
-
-
 crimeData2016 <- left_join( crimeData2016, results, by = "INC.NUMBER" )
-
-
 
 
 
