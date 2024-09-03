@@ -12,10 +12,19 @@ library( tidygeocoder ) # help with geocoding
 library( tidycensus )   # getting data from the census API
 
 
-# Get the data.
+# get the data
 url <- "https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crime-data_crime-data_crimestat.csv"
 crimeData <- read.csv( url, as.is = TRUE, header = TRUE )
 crimeData <- na.omit( crimeData )
+
+# remove duplicate ids
+duplicate_ids <- crimeData$$INC.NUMBER[duplicated(crimeData$$INC.NUMBER)]
+
+# remove all instances of duplicates
+crimeData <- crimeData[!crimeData$INC.NUMBER %in% duplicate_ids, ]
+
+# drop the object with the duplicated ids
+rm( duplicated_ids )
 
 # clean up the dates
 date.vec <- strptime( crimeData$OCCURRED.ON, format="%m/%d/%Y %H:%M" )
