@@ -26,7 +26,7 @@ The [Crime Data](https://www.phoenixopendata.com/dataset/crime-data) file from t
 
 <br>
 
-### Preparing the enviornment
+### Preparing the environment
 
 First we need to clear the workspace and load the libraries we are going to use.
 
@@ -57,10 +57,15 @@ Next we want to load the data and do some cleaning. The data can be called direc
 
 ```{r, results="hide"}
 
-# Get the data.
+# get the data
 url <- "https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crime-data_crime-data_crimestat.csv"
 crimeData <- read.csv( url, as.is = TRUE, header = TRUE )
 crimeData <- na.omit( crimeData )
+
+# remove duplicate ids
+duplicateIds <- crimeData$INC.NUMBER[ duplicated( crimeData$INC.NUMBER )]
+crimeData <- crimeData[ !crimeData$INC.NUMBER %in% duplicateIds, ]
+rm( duplicateIds )
 
 # clean up the dates
 date.vec <- strptime( crimeData$OCCURRED.ON, format="%m/%d/%Y %H:%M" )
@@ -82,6 +87,11 @@ crimeData <-
     UCR.CRIME.CATEGORY == "MOTOR VEHICLE THEFT" ~ "MV Theft",
     UCR.CRIME.CATEGORY == "RAPE" ~ "Rape",
     UCR.CRIME.CATEGORY == "ROBBERY" ~ "Robbery" ) )
+
+# drop cases from 2015 (these are dropped because the 2015 cases begin in December)
+crimeData <- 
+  crimeData %>% 
+  filter( year != 2015 )
 
 # drop cases for the most recent month
 crimeData <- crimeData[ ! ( 

@@ -2,7 +2,6 @@
 # clear workspace
 rm( list = ls() )
 
-
 # load libraries
 library( dplyr )        # used for wrangling the data
 library( tidyr )        # used for wrangling the data
@@ -18,161 +17,150 @@ crimeData <- read.csv( url, as.is = TRUE, header = TRUE )
 crimeData <- na.omit( crimeData )
 
 # remove duplicate ids
-duplicate_ids <- crimeData$$INC.NUMBER[duplicated(crimeData$$INC.NUMBER)]
-
-# remove all instances of duplicates
-crimeData <- crimeData[!crimeData$INC.NUMBER %in% duplicate_ids, ]
-
-# drop the object with the duplicated ids
-rm( duplicated_ids )
+duplicateIds <- crimeData$INC.NUMBER[ duplicated( crimeData$INC.NUMBER )]
+crimeData <- crimeData[ !crimeData$INC.NUMBER %in% duplicateIds, ]
+rm( duplicateIds )
 
 # clean up the dates
 date.vec <- strptime( crimeData$OCCURRED.ON, format="%m/%d/%Y %H:%M" )
 crimeData$year   <- format( date.vec, format="%Y" )
-crimeData$month  <- format( date.vec, format="%B" )
-crimeData$day365 <- format( date.vec, format="%j" )
-crimeData$week   <- format( date.vec, format="%V" )
-
-# clean up the variable classifying the cases
-crimeData <- 
-  crimeData %>% 
-  mutate( crime.type = case_when( 
-    UCR.CRIME.CATEGORY == "AGGRAVATED ASSAULT" ~ "Assault",
-    UCR.CRIME.CATEGORY == "ARSON" ~ "Arson",
-    UCR.CRIME.CATEGORY == "BURGLARY" ~ "Burglary",
-    UCR.CRIME.CATEGORY == "DRUG OFFENSE" ~ "Drugs",
-    UCR.CRIME.CATEGORY == "LARCENY-THEFT" ~ "Theft",
-    UCR.CRIME.CATEGORY == "MURDER AND NON-NEGLIGENT MANSLAUGHTER" ~ "Homicide",
-    UCR.CRIME.CATEGORY == "MOTOR VEHICLE THEFT" ~ "MV Theft",
-    UCR.CRIME.CATEGORY == "RAPE" ~ "Rape",
-    UCR.CRIME.CATEGORY == "ROBBERY" ~ "Robbery" ) )
-
-
-
-# drop cases from 2015
-# these are dropped because the 2015 cases begin in December
-crimeData <- 
-  crimeData %>% 
-  filter( year != 2015 )
-
-
-# get 2016
-crimeData2016 <- 
-  crimeData %>% 
-  filter( year == 2016 )
-
-
-
-
-
 
 # set the api key
 census_api_key( "8f1ce150e65b8cba01951fbcbbe65ebbb9409638" )
 
-# fill these two digits with 50 and then append the zip code
-# we use 50 since that is midway between the street segment
-crimeData2016$Address.adj <- gsub( "XX", "50", crimeData2016$X100.BLOCK.ADDR )
 
-# append the zip code
-crimeData2016$Address.zip <- paste( crimeData2016$Address.adj, crimeData2016$ZIP )
+# write the function to get the geocoded data
 
+crimeGeo <- function( crimeDat, filterYear ){
+  
+  # select by year
+  crimeDat <- 
+    crimeDat %>% 
+    filter( year == filterYear )
+  
+    # fill these two digits with 50 and then append the zip code
+  # we use 50 since that is midway between the street segment
+  crimeDat$Address.adj <- gsub( "XX", "50", crimeDat$X100.BLOCK.ADDR )
+  
+  # append the zip code
+  crimeDat$Address.zip <- paste( crimeDat$Address.adj, crimeDat$ZIP )
 
-# the api only takes 10k cases at a time, so we have to do it in batches
-
-# number of cases
-n <- dim( crimeData2016 )[1]
-
-# number of batches
-batches <- n / 10000
-
-# round it and add 1 because it rounds down
-batches <- round( batches ) + 1
-
-# create the group ids
-groups <- gl( n = batches, k = ceiling(length(crimeData2016$Address.zip)/batches), length = length(crimeData2016$Address.zip))
-
-# Split the character vector into separate groups
-grouped_char_vectors <- split( crimeData2016$Address.zip, groups )
-
-# Create a loop to dynamically assign each group to a separate object
-for (i in seq_along(grouped_char_vectors)) {
-  assign(paste0("group", i), grouped_char_vectors[[i]])
-}
-
-
-# 
-# group_list <- list(group1, group2, group3, group4, group5,group6,group7)
-
-# Initialize an empty list to store the group objects
-group_list <- list()
-
-# Loop to dynamically add each group to the list
-for (i in 1:batches) {
-  group_list[[i]] <- get( paste0("group", i ) )
-}
-
-
-# Initialize a list to store the results
-spatial_results <- list()
-
-# Loop over the groups and apply the geo() function
-for (i in seq_along(group_list)) {
-  spatial_results[[i]] <- geo( 
-    group_list[[i]],               # use the current group of addresses
-    full_results = TRUE,           # request all data from the geocoding service
-    method = "census",             # specify the census method
-    api_options = list(census_return_type = "geographies")  # set API options
-  )
-}
-
-
-# take the results and create a dataframe
-results <- data.frame( 
-  Address.zip = character(), 
-  lat = numeric(),
-  long = numeric(),
-  stringsAsFactors = FALSE 
-  )
-
-# Loop through the list and add rows to the data frame
-for ( i in seq_along( spatial_results ) ) {
-  # Extract the address and lat elements
-  temp_df <- data.frame(
-    Address.zip = spatial_results[[i]]$address,
-    lat = spatial_results[[i]]$lat,
-    long = spatial_results[[i]]$long
+    
+  # ----
+  # the api only takes 10k cases at a time, so we have to do it in batches
+  
+  # number of cases
+  n <- dim( crimeDat )[1]
+  
+  # number of batches
+  batches <- n / 10000
+  
+  # round it and add 1 because it rounds down
+  batches <- round( batches ) + 1
+  
+  # create the group ids
+  groups <- gl( 
+    n = batches, 
+    k = ceiling( length( crimeDat$Address.zip ) / batches ), 
+    length = length( crimeDat$Address.zip ) )
+  
+  # Split the character vector into separate groups
+  grouped_char_vectors <- split( crimeDat$Address.zip, groups )
+  
+  # Create a loop to dynamically assign each group to a separate object
+  for ( i in seq_along( grouped_char_vectors ) ) {
+    assign( paste0( "group", i ), grouped_char_vectors[[i]] )
+  }
+  
+  # Initialize an empty list to store the group objects
+  group_list <- list()
+  
+  # Loop to dynamically add each group to the list
+  for ( i in 1:batches ) {
+    group_list[[i]] <- get( paste0("group", i ) )
+  }
+  
+  # Initialize a list to store the results
+  spatial_results <- list()
+  
+  # Loop over the groups and apply the geo() function
+  for ( i in seq_along( group_list ) ) {
+    spatial_results[[i]] <- geo( 
+      group_list[[i]],               # use the current group of addresses
+      full_results = TRUE,           # request all data from the geocoding service
+      method = "census",             # specify the census method
+      api_options = list( census_return_type = "geographies" )  # set API options
+    )
+  }
+  
+  # take the results and create a dataframe
+  results <- data.frame( 
+    Address.zip = character(), 
+    lat = numeric(),
+    long = numeric(),
+    stringsAsFactors = FALSE 
   )
   
-  # Add the rows to the existing data frame
-  results <- rbind( results , temp_df )
+  # Loop through the list and add rows to the data frame
+  for ( i in seq_along( spatial_results ) ) {
+    # Extract the address and lat elements
+    temp_df <- data.frame(
+      Address.zip = spatial_results[[i]]$address,
+      lat = spatial_results[[i]]$lat,
+      long = spatial_results[[i]]$long
+    )
+    
+    # Add the rows to the existing data frame
+    results <- rbind( results , temp_df )
+  }
+  
+  # pull the id for joining the data
+  results$INC.NUMBER <- crimeDat$INC.NUMBER
+  
+  return( results )
 }
 
 
-# added there here because you are trying to work with the object
-# and it keeps getting written over
-results2 <- results
+# run the function over the years
+crimeDat2016 <- crimeGeo( crimeData, 2016 )
+crimeDat2017 <- crimeGeo( crimeData, 2017 )
+crimeDat2018 <- crimeGeo( crimeData, 2018 )
+crimeDat2019 <- crimeGeo( crimeData, 2019 )
+crimeDat2020 <- crimeGeo( crimeData, 2020 )
+crimeDat2021 <- crimeGeo( crimeData, 2021 )
+crimeDat2022 <- crimeGeo( crimeData, 2022 )
+crimeDat2023 <- crimeGeo( crimeData, 2023 )
+crimeDat2024 <- crimeGeo( crimeData, 2024 )
 
-# pull the id for joining the data
-results$INC.NUMBER <- crimeData2016$INC.NUMBER
-
-
-crimeData2016 <- left_join( crimeData2016, results, by = "INC.NUMBER" )
-
-
-
-
-Need to think about how you want this structured,
-so you pull the years, code them, and then create a data object?
-  Do you then call that to tie into the file in the other pre-processing?
-
-
-
-
-# pull the spatial geographic data
-spatial <- geo( 
-  crimeData2016$Address.zip,  # the addresses with zip codes
-  full_results = TRUE,         # we want all of the data from the geocoding service
-  method = "census",           # we want the information from the census
-  api_options = list( census_return_type = "geographies" )
+# bind them all together
+crimeDatGeo <- bind_rows(
+  crimeDat2016, crimeDat2017, crimeDat2018, crimeDat2019,
+  crimeDat2020, crimeDat2021, crimeDat2022, crimeDat2023,
+  crimeDat2024
 )
+
+
+
+this needs a save as an rds file to go in the crime folder
+
+Now you want to save this as an object, then use the code below to join
+these to the crime dat file in the pre-processing file
+
+
+crimeDataNew <- left_join( crimeData, crimeDat2016, by = "INC.NUMBER" )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
