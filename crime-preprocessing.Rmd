@@ -39,10 +39,12 @@ rm( list = ls() )
 
 
 # load libraries
-library( dplyr )    # used for wrangling the data
-library( tidyr )    # used for wrangling the data
-library( openxlsx ) # for opening an excel file
-library( here )     # for referencing the local directory
+library( dplyr )        # used for wrangling the data
+library( tidyr )        # used for wrangling the data
+library( openxlsx )     # for opening an excel file
+library( here )         # for referencing the local directory
+library( tidycensus )   # getting data from the census API
+library( zoo )          # to help with interpolation
 
 
 ```
@@ -108,71 +110,15 @@ crimeData <- crimeData[ ! (
 
 Right now, the `crimeData` object is a list of incidents. When we go to aggregate over months or years, we are going to want to adjust based on population differences. In other words, we will want to calculate the rates (not just examine raw counts).
 
-The rates are computed using population data from the [Census Bureau](https://www.census.gov/topics/population.html). The site lists Excel files with estimates of population for incorporated places. Since this is an .xlxs file, we will use the `openxlxs` package (again, click the "Show" button on the right to see the code for this section).
-
-We will work with two files:
-
-  + Years 2010-2019 for [Arizona](https://www2.census.gov/programs-surveys/popest/tables/2010-2019/cities/totals/SUB-IP-EST2019-ANNRES-04.xlsx)
-  
-  + Years 2020-2021 for [Arizona](https://www2.census.gov/programs-surveys/popest/tables/2020-2021/cities/totals/SUB-IP-EST2021-POP-04.xlsx) 
-
-Let's pull these estimates in and get the data for Phoenix.
+The rates are computed using population data from the [Census Bureau](https://www.census.gov/topics/population.html). The command below uses the Census Bureau API to pull the data. To see more about how the API is used, see the [phoenix-population.R](/Users/jyoung20/ASU Dropbox/Jacob Young/GitHub_repos/OpenCrimPhx/utils/phoenix-population.R) file.
 
 <br>
 
 ```{r}
 
-# get years 2016-2019
-pop.data.2016.2019 <- read.xlsx(
-  "https://www2.census.gov/programs-surveys/popest/tables/2010-2019/cities/totals/SUB-IP-EST2019-ANNRES-04.xlsx",
-  colNames = TRUE,
-  startRow = 4
-)
-
-# find the row with the data for Phoenix
-grep("Phoenix", pop.data.2016.2019[,1])
-
-# it is the 55th row in the object
-phoenix.pop.2016.2019 <-  pop.data.2016.2019[55,]
-phoenix.pop.2016.2019
-
-# we only need the data for 2016-2019
-phoenix.pop.2016.2019 <- phoenix.pop.2016.2019[-c(1:9)]
-phoenix.pop.2016.2019
-
-# repeat these steps for the 2020-2021 data
-pop.data.2020.2021 <- read.xlsx(
-  "https://www2.census.gov/programs-surveys/popest/tables/2020-2021/cities/totals/SUB-IP-EST2021-POP-04.xlsx",
-  colNames = TRUE,
-  startRow = 4
-)
-
-# find the row with the data for Phoenix (still the 55th)
-grep( "Phoenix", pop.data.2020.2021[,1] )
-phoenix.pop.2020.2021 <-  pop.data.2020.2021[55,]
-phoenix.pop.2020.2021 <- phoenix.pop.2020.2021[-c(1:2)]
-
-# combine the data into a single object
-phoenix.pop <- cbind( phoenix.pop.2016.2019, phoenix.pop.2020.2021 )
-phoenix.pop
-
-# missing 2022 and 2023 and 2024
-# add the difference for each year until you get the actual demographic data
-phoenix.pop$"2022" <- phoenix.pop$"2021" + phoenix.pop$"2021" - phoenix.pop$"2020"
-phoenix.pop$"2023" <- phoenix.pop$"2022" + phoenix.pop$"2022" - phoenix.pop$"2021"
-phoenix.pop$"2024" <- phoenix.pop$"2023" + phoenix.pop$"2023" - phoenix.pop$"2022"
-
-# now we coerce the data to be numeric to use it below
-phoenix.pop.data <- as.numeric( phoenix.pop )
-phoenix.pop.data
-
-# attach years to the population data
-phoenixPopDat <- data.frame(
-  year = names( phoenix.pop ),
-  population = phoenix.pop.data,
-  stringsAsFactors = FALSE
-)
-
+import::here( "phoenixPopDat",
+              .from = here::here( "utils/phoenix-population.R" ),
+              .character_only = TRUE )
 
 ```
 
@@ -181,6 +127,23 @@ phoenixPopDat <- data.frame(
 We now have an object, `phoenixPopDat` that is the yearly population for Phoenix. Note that the population for 2022-2024 is just an estimate, not that reported to the Census Bureau.
 
 <br>
+
+## Appending the Geo Data
+
+We can append the geographic data for the data. This piece calls the [crimeDatGeo2016-2024.rds]() file that is created using the [crime-geo.R]() script. It uses the Census API to pull coordinate data.
+
+```{r}
+
+# get the file
+crimeDatGeo <- readRDS( here( "data/data-geo/crimeDatGeo2016-2024.rds" ) )
+
+# merge the geographic data with the cases
+crimeData <- left_join( crimeData, crimeDatGeo, by = "INC.NUMBER" )
+
+```
+
+<br>
+
 
 ## Creating Objects
 
@@ -338,7 +301,6 @@ saveRDS( crimesByTypeByMonth, file = here( "data/crimesByTypeByMonth.rds" ) )
 saveRDS( crimesByTypeByYear , file = here( "data/crimesByTypeByYear.rds" ) )
 saveRDS( crimeRatesMonthType, file = here( "data/crimeRatesMonthType.rds" ) )
 saveRDS( crimeRatesYearType , file = here( "data/crimeRatesMonthYear.rds" ) )
-
 
 
 ```
