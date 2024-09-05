@@ -139,28 +139,5 @@ crimeDatGeo <- bind_rows(
   crimeDat2024
 )
 
-
-
-this needs a save as an rds file to go in the crime folder
-
-Now you want to save this as an object, then use the code below to join
-these to the crime dat file in the pre-processing file
-
-
-crimeDataNew <- left_join( crimeData, crimeDat2016, by = "INC.NUMBER" )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# save the geo data
+saveRDS( crimeDatGeo , file = here( "data/data-geo/crimeDatGeo2016-2024.rds" ) )
