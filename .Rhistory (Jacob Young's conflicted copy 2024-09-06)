@@ -1,0 +1,512 @@
+# render the plot
+monthlyCrimeRateByYear %>%
+ggseasonplot(
+year.labels = TRUE,
+continuous = FALSE,
+main = "Plot of Monthly Crime Rate by Years for Phoenix, AZ",
+col = colorRampPalette(c("#f7968f", "#c41104"))( dim( crimeRatesMonth )[2] ) ) +
+scale_y_continuous( label = comma ) +
+geom_line( size = 1.2 ) +
+theme_minimal()
+library( blscrapeR )
+series_id <- "LAUMT043806000000003"
+unemployment_data <- bls_api(
+series_id,
+startyear = head( names( crimeRatesMonth ), n=1 ),
+endyear = tail( names( crimeRatesMonth ), n=1 )
+)
+UnemployByMonth <-
+unemployment_data %>%
+select( year, periodName, value) %>%
+mutate( month = factor( unemployment_data$periodName,levels = month.name ) ) %>%
+select( !periodName ) %>%
+group_by( year, month ) %>%
+spread( year, value ) %>%
+ungroup() %>%
+select( !month )
+# create a time series object for plotting
+monthlyUnemploymentRateByYear <- ts(
+matrix( as.matrix( UnemployByMonth ), ncol = 1 ),
+start=c( 2016, 1 ),
+end=c( as.numeric( tail( names( UnemployByMonth ), n=1 ) ), 12 ), frequency=12
+)
+# plot the rates
+monthlyUnemploymentRateByYear %>%
+ggseasonplot(
+year.labels = TRUE,
+continuous = FALSE,
+main = "Plot of Monthly Crime Rate by Years for Phoenix, AZ",
+col = colorRampPalette(c("#f7968f", "#c41104"))( dim( UnemployByMonth )[2] ) ) +
+scale_y_continuous( label = comma ) +
+geom_line( size = 1.2 ) +
+theme_minimal()
+# Fit an ARIMA model with seasonal components
+fit <- auto.arima(
+monthlyCrimeRateByYear,
+seasonal = TRUE,
+stepwise = FALSE,
+approximation = FALSE
+)
+# Forecast the next 12 months
+forecasted_values <- forecast( fit, h = 12 )
+# Convert time series to a data frame for ggplot
+actual_data <- data.frame(
+ds = time( monthlyCrimeRateByYear ),
+y = as.numeric( monthlyCrimeRateByYear )
+)
+forecast_data <- data.frame(
+ds = time( forecasted_values$mean ),
+yhat = as.numeric( forecasted_values$mean ),
+lower = as.numeric( forecasted_values$lower[,2] ),
+upper = as.numeric( forecasted_values$upper[,2] )
+)
+# Plot the actual data and forecast using ggplot2
+ggplot() +
+geom_line( data = actual_data, aes(x = ds, y = y), color = "grey40") +  # Actual data
+geom_line( data = forecast_data, aes(x = ds, y = yhat), color = "#c41104", linetype = "dashed") +  # Forecasted data
+geom_ribbon(data = forecast_data, aes(x = ds, ymin = lower, ymax = upper), alpha = 0.2) +  # Confidence interval
+labs( title = "Plot of Monthly Crime Rate by Years for Phoenix, AZ with Predicted Trend",
+x = "Date",
+y = "Crime Count" ) +
+theme_minimal()
+time( monthlyCrimeRateByYear )
+as.numeric( monthlyCrimeRateByYear )
+?time
+actual_data <- data.frame(
+dsCrime = time( monthlyCrimeRateByYear ),
+yCrime = as.numeric( monthlyCrimeRateByYear ),
+dsUnemp = time( monthlyUnemploymentRateByYear ),
+yUnemp = as.numeric( monthlyUnemploymentRateByYear )
+)
+ggplot() +
+geom_line( data = actual_data, aes(x = dsCrime, y = yCrime), color = "grey40") +
+geom_line( data = actual_data, aes(x = dsUnemp, y = yUnemp), color = "red")
+library(cowplot)
+# render the plot
+crime_seasonplot <- monthlyCrimeRateByYear %>%
+ggseasonplot(
+year.labels = TRUE,
+continuous = FALSE,
+main = "Plot of Monthly Crime Rate by Years for Phoenix, AZ",
+col = colorRampPalette(c("#f7968f", "#c41104"))( dim( crimeRatesMonth )[2] ) ) +
+scale_y_continuous( label = comma ) +
+geom_line( size = 1.2 ) +
+theme_minimal()
+unemployment_seasonplot <- monthlyUnemploymentRateByYear %>%
+ggseasonplot(
+year.labels = TRUE,
+continuous = FALSE,
+main = "Plot of Monthly Unemployment Rate by Years for Phoenix, AZ",
+col = colorRampPalette(c("#f7968f", "#c41104"))( dim( UnemployByMonth )[2] ) ) +
+scale_y_continuous( label = comma ) +
+geom_line( size = 1.2 ) +
+theme_minimal()
+combined_plot <- plot_grid( crime_seasonplot, unemployment_seasonplot, ncol = 1 )
+print( combined_plot )
+crime_plot <- actual_data %>%
+ggplot() +
+geom_line( data = actual_data, aes(x = ds, y = y), color = "grey40") +  # Actual data
+labs( title = "Plot of Monthly Crime Rate by Years for Phoenix, AZ with Predicted Trend",
+x = "Date",
+y = "Crime Count" ) +
+theme_minimal()
+crime_plot <- actual_data %>%
+ggplot() +
+geom_line( data = actual_data, aes(x = ds, y = y), color = "grey40") +  # Actual data
+labs( title = "Plot of Monthly Crime Rate by Years for Phoenix, AZ with Predicted Trend",
+x = "Date",
+y = "Crime Count" ) +
+theme_minimal()
+ggplot() +
+geom_line( data = actual_data, aes(x = dsCrime, y = yCrime), color = "grey40") +
+theme_minimal()
+actual_data <- data.frame(
+dsCrime = time( monthlyCrimeRateByYear ),
+yCrime = as.numeric( monthlyCrimeRateByYear ),
+dsUnemp = time( monthlyUnemploymentRateByYear ),
+yUnemp = as.numeric( monthlyUnemploymentRateByYear )
+)
+crime_plot <- ggplot() +
+geom_line( data = actual_data, aes(x = dsCrime, y = yCrime), color = "grey40") +
+theme_minimal()
+unemp_plot <- ggplot() +
+geom_line( data = actual_data, aes(x = dsUnemp, y = yUnemp), color = "grey40") +
+theme_minimal()
+combined_plot <- plot_grid( crime_plot, unemp_plot, ncol = 1 )
+print( combined_plot )
+install.packages("MTS")
+library(MTS)
+combined_data <- cbind( monthlyCrimeRateByYear, monthlyUnemploymentRateByYear )
+varima_model <- VARMA(combined_data, p = 1, q = 1)  # p and q are the lag orders
+head(combined_data)
+combined_data
+ts1 <- arima.sim(n = 100, list(ar = c(0.5)))
+ts2 <- arima.sim(n = 100, list(ar = c(-0.3)))
+com <- cbind(ts1,ts2)
+com
+knitr::opts_chunk$set( echo = TRUE,
+message = FALSE,
+warning = FALSE,
+eval = TRUE,
+fig.width = 12,
+fig.height = 10 )
+combined_data <- cbind( monthlyCrimeRateByYear, monthlyUnemploymentRateByYear )
+combined_data <- na.omit( combined_data )
+varima_model <- VARMA( combined_data, p = 1, q = 1 )  # p and q are the lag orders
+summary( varima_model )
+# Forecasting using the VARIMA model
+forecasts <- VARMApred( varima_model, h = 10 )  # h is the forecast horizon
+print(forecasts$pred)
+knitr::opts_chunk$set( echo = TRUE,
+message = FALSE,
+warning = FALSE,
+eval = TRUE,
+fig.width = 12,
+fig.height = 10 )
+# clear workspace
+rm( list = ls() )
+# load libraries
+library( dplyr )    # used for wrangling the data
+library( tidyr )    # used for wrangling the data
+library( ggplot2 )  # for plotting
+library( cowplot )  # for putting the plots together
+library( scales )   # for formatting the text
+library( forecast ) # for working with time series data
+library( here )     # for referencing the local directory
+# define the objects
+crimeData       <- readRDS( here( "data/crimeData.rds" ) )
+crimesByDay     <- readRDS( here( "data/crimesByDay.rds" ) )
+crimesByMonth   <- readRDS( here( "data/crimesByMonth.rds" ) )
+crimesByYear    <- readRDS( here( "data/crimesByYear.rds" ) )
+crimeRatesMonth <- readRDS( here( "data/crimeRatesMonth.rds" ) )
+crimeRatesYear  <- readRDS( here( "data/crimeRatesYear.rds" ) )
+crimeRatesMonthType  <- readRDS( here( "data/crimeRatesMonthType.rds" ) )
+library( blscrapeR )
+series_id <- "LAUMT043806000000003"
+unemployment_data <- bls_api(
+series_id,
+startyear = head( names( crimeRatesMonth ), n=1 ),
+endyear = tail( names( crimeRatesMonth ), n=1 )
+)
+UnemployByMonth <-
+unemployment_data %>%
+select( year, periodName, value) %>%
+mutate( month = factor( unemployment_data$periodName,levels = month.name ) ) %>%
+select( !periodName ) %>%
+group_by( year, month ) %>%
+spread( year, value ) %>%
+ungroup() %>%
+select( !month )
+# create a time series object for plotting
+monthlyUnemploymentRateByYear <- ts(
+matrix( as.matrix( UnemployByMonth ), ncol = 1 ),
+start=c( 2016, 1 ),
+end=c( as.numeric( tail( names( UnemployByMonth ), n=1 ) ), 12 ), frequency=12
+)
+library( MTS )
+# Combine the time series into a matrix
+combined_data <- cbind( monthlyCrimeRateByYear, monthlyUnemploymentRateByYear )
+# create a time series object for plotting
+monthlyCrimeRateByYear <- ts(
+matrix( as.matrix( crimeRatesMonth ), ncol = 1 ),
+start=c( 2016, 1 ),
+end=c( as.numeric( tail( names( crimeRatesMonth ), n=1 ) ), 12 ), frequency=12
+)
+library( MTS )
+# Combine the time series into a matrix
+combined_data <- cbind( monthlyCrimeRateByYear, monthlyUnemploymentRateByYear )
+combined_data <- na.omit( combined_data )
+combined_data
+cor(combined_data[,1], combined_data[,2])
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+# Example data (replace this with your actual data)
+# Make sure your data is in a data frame with columns: Date, Crime, Unemployment
+data <- data.frame(
+Date = seq(as.Date("2020-01-01"), as.Date("2023-12-01"), by = "month"),
+Crime = rnorm(48, mean = 100, sd = 10),
+Unemployment = rnorm(48, mean = 5, sd = 1)
+)
+# Calculate correlation
+correlation <- cor(data$Crime, data$Unemployment)
+print(paste("Correlation between Crime and Unemployment: ", correlation))
+# Reshape data for plotting
+data_long <- data %>%
+pivot_longer(cols = c(Crime, Unemployment), names_to = "Variable", values_to = "Value")
+# Plotting the time series
+ggplot(data_long, aes(x = Date, y = Value, color = Variable)) +
+geom_line(size = 1) +
+labs(title = "Monthly Crime and Unemployment Rates Over Time",
+subtitle = paste("Correlation:", round(correlation, 2)),
+x = "Date",
+y = "Value") +
+scale_color_manual(values = c("Crime" = "blue", "Unemployment" = "red")) +
+theme_minimal()
+?ccf
+?Ccf
+ccf(combined_data[,1], combined_data[,2])
+ccf( combined_data[,1], combined_data[,2] )
+print(ccf( combined_data[,1], combined_data[,2] ))
+combined_data[,1]
+combined_data[,2]
+actual_data <- na.omit( actual_data )
+actual_data <- data.frame(
+dsCrime = time( monthlyCrimeRateByYear ),
+yCrime = as.numeric( monthlyCrimeRateByYear ),
+dsUnemp = time( monthlyUnemploymentRateByYear ),
+yUnemp = as.numeric( monthlyUnemploymentRateByYear )
+)
+actual_data <- na.omit( actual_data )
+ccf( actual_data$yCrime, actual_data$yUnemp )
+ccf( actual_data$yCrime, actual_data$yUnemp )
+print( ccf( actual_data$yCrime, actual_data$yUnemp ) )
+?Ccf
+wineind
+Acf(wineind)
+Ccf( actual_data$yCrime, actual_data$yUnemp )
+Ccf( actual_data$yCrime, actual_data$yUnemp )
+knitr::opts_chunk$set( echo = TRUE,
+message = FALSE,
+warning = FALSE,
+fig.width = 12,
+fig.height = 10 )
+rm( list = ls() )
+# libraries we will need
+library( dplyr )
+library( pander )
+# Get the data from the open data potal
+url <- "https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crimestat.csv"
+crime.data <- read.csv( url, as.is = TRUE, header = TRUE )
+url <- "https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crime-data_crime-data_crimestat.csv"
+crime.data <- read.csv( url, as.is = TRUE, header = TRUE )
+# drop missing cases
+crime.data <- na.omit( crime.data )
+# take a look at the addresses
+# we can see how they are redacted
+head( crime.data$X100.BLOCK.ADDR )
+# Libraries we will need
+library( tidyr )
+library( tidygeocoder )
+library( tidycensus )
+# set the api key
+census_api_key( "8f1ce150e65b8cba01951fbcbbe65ebbb9409638" )
+crime.data$Address.adj <- gsub( "XX", "50", crime.data$X100.BLOCK.ADDR )
+crime.data$Address.zip <- paste( crime.data$Address.adj, crime.data$ZIP )
+# sample 100 cases for demonstration
+set.seed( 54321 )
+crime.data.sub <- crime.data[sample( nrow( crime.data ), 100, replace = FALSE ), ]
+# pull the spatial geographic data
+spatial <- geo(
+crime.data.sub$Address.zip,  # the addresses with zip codes
+full_results = TRUE,         # we want all of the data from the geocoding service
+method = "census",           # we want the information from the census
+api_options = list( census_return_type = "geographies" )
+)
+spatial
+class(spatial)
+spatial$lat
+spatial$long
+# examine our object
+head( spatial )
+# look at how many matches we have
+table( is.na( spatial$census_block ) )
+# add the incident number to the spatial data
+spatial$INC.NUMBER <- crime.data.sub$INC.NUMBER
+crime.data.sp.sub <- merge( crime.data.sub, spatial,
+by.x="INC.NUMBER", by.y="INC.NUMBER")
+# Get the data from the open data potal
+url <- "https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crimestat.csv"
+crime.data <- read.csv( url, as.is = TRUE, header = TRUE )
+url <- "https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crime-data_crime-data_crimestat.csv"
+crime.data <- read.csv( url, as.is = TRUE, header = TRUE )
+# drop missing cases
+crime.data <- na.omit( crime.data )
+# take a look at the first few cases
+head( crime.data ) %>% pander()
+# take a look at the addresses
+# we can see how they are redacted
+head( crime.data$X100.BLOCK.ADDR )
+# clear workspace
+rm( list = ls() )
+# load libraries
+library( dplyr )    # used for wrangling the data
+library( tidyr )    # used for wrangling the data
+library( openxlsx ) # for opening an excel file
+library( here )     # for referencing the local directory
+# Get the data.
+url <- "https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crime-data_crime-data_crimestat.csv"
+crimeData <- read.csv( url, as.is = TRUE, header = TRUE )
+crimeData <- na.omit( crimeData )
+# clean up the dates
+date.vec <- strptime( crimeData$OCCURRED.ON, format="%m/%d/%Y %H:%M" )
+crimeData$year   <- format( date.vec, format="%Y" )
+crimeData$month  <- format( date.vec, format="%B" )
+crimeData$day365 <- format( date.vec, format="%j" )
+crimeData$week   <- format( date.vec, format="%V" )
+# clean up the variable classifying the cases
+crimeData <-
+crimeData %>%
+mutate( crime.type = case_when(
+UCR.CRIME.CATEGORY == "AGGRAVATED ASSAULT" ~ "Assault",
+UCR.CRIME.CATEGORY == "ARSON" ~ "Arson",
+UCR.CRIME.CATEGORY == "BURGLARY" ~ "Burglary",
+UCR.CRIME.CATEGORY == "DRUG OFFENSE" ~ "Drugs",
+UCR.CRIME.CATEGORY == "LARCENY-THEFT" ~ "Theft",
+UCR.CRIME.CATEGORY == "MURDER AND NON-NEGLIGENT MANSLAUGHTER" ~ "Homicide",
+UCR.CRIME.CATEGORY == "MOTOR VEHICLE THEFT" ~ "MV Theft",
+UCR.CRIME.CATEGORY == "RAPE" ~ "Rape",
+UCR.CRIME.CATEGORY == "ROBBERY" ~ "Robbery" ) )
+# drop cases for the most recent month
+crimeData <- crimeData[ ! (
+crimeData$month == format( Sys.Date(), format="%B" ) &
+crimeData$year == format( Sys.Date(), format="%Y" )
+) , ]
+head(crimeData)
+table(crimeData$year)
+crimeData <-
+crimeData %>%
+filter( year != 2015 )
+table(crimeData$year)
+# get 2016
+crimeData2016 <-
+crimeData %>%
+filter( year == 2016 )
+# set the api key
+census_api_key( "8f1ce150e65b8cba01951fbcbbe65ebbb9409638" )
+# fill these two digits with 50 and then append the zip code
+# we use 50 since that is midway between the street segment
+crimeData2016$Address.adj <- gsub( "XX", "50", crimeData2016$X100.BLOCK.ADDR )
+# append the zip code
+crimeData2016$Address.zip <- paste( crimeData2016$Address.adj, crimeData2016$ZIP )
+# pull the spatial geographic data
+spatial <- geo(
+crimeData2016$Address.zip,  # the addresses with zip codes
+full_results = TRUE,         # we want all of the data from the geocoding service
+method = "census",           # we want the information from the census
+api_options = list( census_return_type = "geographies" )
+)
+dim(crimeData2016a)
+dim(crimeData2016)
+length(unique(crimeData2016$Address.zip))
+is.na(crimeData2016$Address.zip)
+table(is.na(crimeData2016$Address.zip))
+crimeData2016$Address.zip
+dim(crimeData2016)
+n <- dim( crimeData2016 )[1]
+n
+batches <- n / 10000
+bathces
+batches
+batches <- round( batches )
+batches
+?round
+batches <- round( batches ) + 1
+vector <- c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+# Split the vector into 5 equal groups
+groups <- cut(vector, breaks = 5, labels = FALSE)
+# Display the groups
+groups
+grouped_vectors <- split(vector, groups)
+grouped_vectors
+group1 <- grouped_vectors[[1]]
+group2 <- grouped_vectors[[2]]
+group3 <- grouped_vectors[[3]]
+group4 <- grouped_vectors[[4]]
+group5 <- grouped_vectors[[5]]
+# Display the separate objects
+group1
+group2
+group3
+group4
+group5
+groups <- cut( crimeData2016$Address.zip, breaks = batches, labels = FALSE )
+groups <- gl( n = batches, k = ceiling(length(crimeData2016$Address.zip)/batches), length = length(crimeData2016$Address.zip))
+groups
+table(groups)
+grouped_char_vectors <- split( crimeData2016$Address.zip, groups )
+grouped_char_vectors
+dim(grouped_char_vectors)
+class(grouped_char_vectors)
+group1 <- grouped_char_vectors[[1]]
+for (i in seq_along(grouped_char_vectors)) {
+assign(paste0("group", i), grouped_char_vectors[[i]])
+}
+ls()
+head(group1)
+ls()
+group_list <- list(group1, group2, group3, group4, group5,group6,group7)
+spatial_results <- list()
+# Loop over the groups and apply the geo() function
+for (i in seq_along(group_list)) {
+spatial_results[[i]] <- geo(
+group_list[[i]],               # use the current group of addresses
+full_results = TRUE,           # request all data from the geocoding service
+method = "census",             # specify the census method
+api_options = list(census_return_type = "geographies")  # set API options
+)
+}
+paste0("group""1")
+paste0("group")
+rep(paste0("group"),2)
+# Initialize an empty list to store the group objects
+group_list <- list()
+# Loop to dynamically add each group to the list
+for (i in 1:groups) {
+group_list[[i]] <- get( paste0("group", i ) )
+}
+group1
+groups
+class(groups)
+# Initialize an empty list to store the group objects
+group_list <- list()
+# Loop to dynamically add each group to the list
+for (i in 1:batches) {
+group_list[[i]] <- get( paste0("group", i ) )
+}
+?get
+# clear workspace
+rm( list = ls() )
+# load libraries
+library( dplyr )        # used for wrangling the data
+library( tidyr )        # used for wrangling the data
+library( openxlsx )     # for opening an excel file
+library( here )         # for referencing the local directory
+library( tidygeocoder ) # help with geocoding
+library( tidycensus )   # getting data from the census API
+# Get the data.
+url <- "https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crime-data_crime-data_crimestat.csv"
+crimeData <- read.csv( url, as.is = TRUE, header = TRUE )
+url <- "https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crime-data_crime-data_crimestat.csv"
+crimeData <- read.csv( url, as.is = TRUE, header = TRUE )
+install.packages("hunspell")
+library(hunspell)
+words <- c("beer", "wiskey", "wine")
+correct <- hunspell_check(words)
+print(correct)
+hunspell_suggest(words[!correct])
+words <- c("beer", "wiskey", "wine", "beaard")
+correct <- hunspell_check(words)
+print(correct)
+hunspell_suggest(words[!correct])
+words <- c("beer", "wiskey", "wine", "beaard", "relathsionhsip")
+correct <- hunspell_check(words)
+print(correct)
+hunspell_suggest(words[!correct])
+# List of words
+words <- c("beer", "wiskey", "wine", "beaard", "relathsionhsip")
+# Check spelling
+correct <- hunspell_check(words)
+# Loop through words and replace incorrect ones with the first suggestion
+for (i in seq_along(words)) {
+if (!correct[i]) {
+suggestions <- hunspell_suggest(words[i])
+if (length(suggestions[[1]]) > 0) {
+words[i] <- suggestions[[1]][1]  # Replace with the first suggestion
+}
+}
+}
+# Print the corrected words
+print(words)
+?seq_along
