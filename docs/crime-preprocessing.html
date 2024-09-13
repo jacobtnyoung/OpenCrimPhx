@@ -267,7 +267,7 @@ $(document).ready(function () {
 
 
 <h1 class="title toc-ignore">Pre-Processing Crime Data for Phoenix</h1>
-<h4 class="date">28 August, 2024</h4>
+<h4 class="date">13 September, 2024</h4>
 
 </div>
 
@@ -287,8 +287,8 @@ objects, and incorporating population data to calculate rates.</p>
 <div id="setup-and-loading-the-data" class="section level2">
 <h2>Setup and Loading the Data</h2>
 <p><br></p>
-<div id="preparing-the-enviornment" class="section level3">
-<h3>Preparing the enviornment</h3>
+<div id="preparing-the-environment" class="section level3">
+<h3>Preparing the environment</h3>
 <p>First we need to clear the workspace and load the libraries we are
 going to use.</p>
 <p><br></p>
@@ -297,10 +297,12 @@ rm( list = ls() )
 
 
 # load libraries
-library( dplyr )    # used for wrangling the data
-library( tidyr )    # used for wrangling the data
-library( openxlsx ) # for opening an excel file
-library( here )     # for referencing the local directory</code></pre>
+library( dplyr )        # used for wrangling the data
+library( tidyr )        # used for wrangling the data
+library( openxlsx )     # for opening an excel file
+library( here )         # for referencing the local directory
+library( tidycensus )   # getting data from the census API
+library( zoo )          # to help with interpolation</code></pre>
 <p><br></p>
 </div>
 <div id="loading-the-data" class="section level3">
@@ -309,10 +311,15 @@ library( here )     # for referencing the local directory</code></pre>
 called directly from the website link, <a
 href="%22https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crime-data_crime-data_crimestat.csv%22">here</a>.</p>
 <p><br></p>
-<pre class="r"><code># Get the data.
+<pre class="r"><code># get the data
 url &lt;- &quot;https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crime-data_crime-data_crimestat.csv&quot;
 crimeData &lt;- read.csv( url, as.is = TRUE, header = TRUE )
 crimeData &lt;- na.omit( crimeData )
+
+# remove duplicate ids
+duplicateIds &lt;- crimeData$INC.NUMBER[ duplicated( crimeData$INC.NUMBER )]
+crimeData &lt;- crimeData[ !crimeData$INC.NUMBER %in% duplicateIds, ]
+rm( duplicateIds )
 
 # clean up the dates
 date.vec &lt;- strptime( crimeData$OCCURRED.ON, format=&quot;%m/%d/%Y %H:%M&quot; )
@@ -335,6 +342,11 @@ crimeData &lt;-
     UCR.CRIME.CATEGORY == &quot;RAPE&quot; ~ &quot;Rape&quot;,
     UCR.CRIME.CATEGORY == &quot;ROBBERY&quot; ~ &quot;Robbery&quot; ) )
 
+# drop cases from 2015 (these are dropped because the 2015 cases begin in December)
+crimeData &lt;- 
+  crimeData %&gt;% 
+  filter( year != 2015 )
+
 # drop cases for the most recent month
 crimeData &lt;- crimeData[ ! ( 
   crimeData$month == format( Sys.Date(), format=&quot;%B&quot; ) &amp;
@@ -351,79 +363,31 @@ adjust based on population differences. In other words, we will want to
 calculate the rates (not just examine raw counts).</p>
 <p>The rates are computed using population data from the <a
 href="https://www.census.gov/topics/population.html">Census Bureau</a>.
-The site lists Excel files with estimates of population for incorporated
-places. Since this is an .xlxs file, we will use the
-<code>openxlxs</code> package (again, click the “Show” button on the
-right to see the code for this section).</p>
-<p>We will work with two files:</p>
-<ul>
-<li><p>Years 2010-2019 for <a
-href="https://www2.census.gov/programs-surveys/popest/tables/2010-2019/cities/totals/SUB-IP-EST2019-ANNRES-04.xlsx">Arizona</a></p></li>
-<li><p>Years 2020-2021 for <a
-href="https://www2.census.gov/programs-surveys/popest/tables/2020-2021/cities/totals/SUB-IP-EST2021-POP-04.xlsx">Arizona</a></p></li>
-</ul>
-<p>Let’s pull these estimates in and get the data for Phoenix.</p>
+The command below uses the Census Bureau API to pull the data. To see
+more about how the API is used, see the <a
+href="/Users/jyoung20/ASU%20Dropbox/Jacob%20Young/GitHub_repos/OpenCrimPhx/utils/phoenix-population.R">phoenix-population.R</a>
+file.</p>
 <p><br></p>
-<pre class="r"><code># get years 2016-2019
-pop.data.2016.2019 &lt;- read.xlsx(
-  &quot;https://www2.census.gov/programs-surveys/popest/tables/2010-2019/cities/totals/SUB-IP-EST2019-ANNRES-04.xlsx&quot;,
-  colNames = TRUE,
-  startRow = 4
-)
-
-# find the row with the data for Phoenix
-grep(&quot;Phoenix&quot;, pop.data.2016.2019[,1])</code></pre>
-<pre><code>## [1] 55</code></pre>
-<pre class="r"><code># it is the 55th row in the object
-phoenix.pop.2016.2019 &lt;-  pop.data.2016.2019[55,]
-phoenix.pop.2016.2019</code></pre>
-<pre><code>##                       X1  Census Estimates.Base    2010    2011    2012    2013
-## 55 Phoenix city, Arizona 1445632        1446691 1449038 1469796 1499274 1526491
-##       2014    2015    2016    2017    2018    2019
-## 55 1555445 1583690 1612199 1633560 1654675 1680992</code></pre>
-<pre class="r"><code># we only need the data for 2016-2019
-phoenix.pop.2016.2019 &lt;- phoenix.pop.2016.2019[-c(1:9)]
-phoenix.pop.2016.2019</code></pre>
-<pre><code>##       2016    2017    2018    2019
-## 55 1612199 1633560 1654675 1680992</code></pre>
-<pre class="r"><code># repeat these steps for the 2020-2021 data
-pop.data.2020.2021 &lt;- read.xlsx(
-  &quot;https://www2.census.gov/programs-surveys/popest/tables/2020-2021/cities/totals/SUB-IP-EST2021-POP-04.xlsx&quot;,
-  colNames = TRUE,
-  startRow = 4
-)
-
-# find the row with the data for Phoenix (still the 55th)
-grep( &quot;Phoenix&quot;, pop.data.2020.2021[,1] )</code></pre>
-<pre><code>## [1] 55</code></pre>
-<pre class="r"><code>phoenix.pop.2020.2021 &lt;-  pop.data.2020.2021[55,]
-phoenix.pop.2020.2021 &lt;- phoenix.pop.2020.2021[-c(1:2)]
-
-# combine the data into a single object
-phoenix.pop &lt;- cbind( phoenix.pop.2016.2019, phoenix.pop.2020.2021 )
-phoenix.pop</code></pre>
-<pre><code>##       2016    2017    2018    2019    2020    2021
-## 55 1612199 1633560 1654675 1680992 1611345 1624569</code></pre>
-<pre class="r"><code># missing 2022 and 2023 and 2024
-# add the difference for each year until you get the actual demographic data
-phoenix.pop$&quot;2022&quot; &lt;- phoenix.pop$&quot;2021&quot; + phoenix.pop$&quot;2021&quot; - phoenix.pop$&quot;2020&quot;
-phoenix.pop$&quot;2023&quot; &lt;- phoenix.pop$&quot;2022&quot; + phoenix.pop$&quot;2022&quot; - phoenix.pop$&quot;2021&quot;
-phoenix.pop$&quot;2024&quot; &lt;- phoenix.pop$&quot;2023&quot; + phoenix.pop$&quot;2023&quot; - phoenix.pop$&quot;2022&quot;
-
-# now we coerce the data to be numeric to use it below
-phoenix.pop.data &lt;- as.numeric( phoenix.pop )
-phoenix.pop.data</code></pre>
-<pre><code>## [1] 1612199 1633560 1654675 1680992 1611345 1624569 1637793 1651017 1664241</code></pre>
-<pre class="r"><code># attach years to the population data
-phoenixPopDat &lt;- data.frame(
-  year = names( phoenix.pop ),
-  population = phoenix.pop.data,
-  stringsAsFactors = FALSE
-)</code></pre>
+<pre class="r"><code>import::here( &quot;phoenixPopDat&quot;,
+              .from = here::here( &quot;utils/phoenix-population.R&quot; ),
+              .character_only = TRUE )</code></pre>
 <p><br></p>
 <p>We now have an object, <code>phoenixPopDat</code> that is the yearly
 population for Phoenix. Note that the population for 2022-2024 is just
 an estimate, not that reported to the Census Bureau.</p>
+<p><br></p>
+</div>
+<div id="appending-the-geo-data" class="section level2">
+<h2>Appending the Geo Data</h2>
+<p>We can append the geographic data for the data. This piece calls the
+<a href="">crimeDatGeo2016-2024.rds</a> file that is created using the
+<a href="">crime-geo.R</a> script. It uses the Census API to pull
+coordinate data.</p>
+<pre class="r"><code># get the file
+crimeDatGeo &lt;- readRDS( here( &quot;data/data-geo/crimeDatGeo2016-2024.rds&quot; ) )
+
+# merge the geographic data with the cases
+crimeData &lt;- left_join( crimeData, crimeDatGeo, by = &quot;INC.NUMBER&quot; )</code></pre>
 <p><br></p>
 </div>
 <div id="creating-objects" class="section level2">
@@ -592,8 +556,8 @@ Criminology Phoenix page</a>
 href="https://github.com/jacobtnyoung/OpenCrimPhx/issues/new">Issues</a>
 page. Thanks!</p>
 <p><br><br></p>
-<div id="last-updated-28-august-2024" class="section level6">
-<h6><strong><em>Last updated 28 August, 2024</em></strong></h6>
+<div id="last-updated-13-september-2024" class="section level6">
+<h6><strong><em>Last updated 13 September, 2024</em></strong></h6>
 </div>
 </div>
 </div>

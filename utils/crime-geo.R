@@ -5,7 +5,6 @@ rm( list = ls() )
 # load libraries
 library( dplyr )        # used for wrangling the data
 library( tidyr )        # used for wrangling the data
-library( openxlsx )     # for opening an excel file
 library( here )         # for referencing the local directory
 library( tidygeocoder ) # help with geocoding
 library( tidycensus )   # getting data from the census API
@@ -122,6 +121,9 @@ crimeGeo <- function( crimeDat, filterYear ){
 
 
 # run the function over the years
+# this is a bit ugly but the loop I came up with
+# created a list and I would have to unlist it
+# so i just went C&P here
 crimeDat2016 <- crimeGeo( crimeData, 2016 )
 crimeDat2017 <- crimeGeo( crimeData, 2017 )
 crimeDat2018 <- crimeGeo( crimeData, 2018 )

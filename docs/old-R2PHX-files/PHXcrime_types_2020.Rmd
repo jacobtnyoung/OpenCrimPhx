@@ -1,0 +1,476 @@
+---
+title: "An extended look at crime (types) in Phoenix in 2020"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    theme: yeti
+    toc: false
+    toc_float: false
+    collapsed: false
+    smooth_scroll: false
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE, 
+                      message = FALSE, 
+                      warning = FALSE, 
+                      fig.width = 12, 
+                      fig.height = 10)
+
+rm(list = ls())
+
+```
+
+
+```{r, echo = FALSE, eval = TRUE}
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+# I run this chunk so that I can go through it and have the tabs show the code.
+
+library( dplyr )
+library( tidyr )
+library( ggplot2 )
+library( forecast )
+library( gridExtra )
+library( here )
+
+
+# Get the data.
+loc <- "data/data-raw/crime-data_crime-data_crimestat.csv"
+crime.data <- read.csv( here( loc ), as.is = TRUE, header = TRUE )
+crime.data <- na.omit( crime.data )
+
+# Help with formatting the text.
+library( scales )
+n.cases <- dim( crime.data )[1]
+
+# Clean up the dates.
+date.vec <- strptime( crime.data$OCCURRED.ON, format="%m/%d/%Y %H:%M" )
+crime.data$year   <- format( date.vec, format="%Y" )
+crime.data$month  <- format( date.vec, format="%B" )
+
+# Drop cases for the most recent month.
+crime.data <- crime.data[ ! ( 
+  crime.data$month == format( Sys.Date(), format="%B" ) &
+  crime.data$year == format( Sys.Date(), format="%Y" ) 
+  ) , ]
+
+# Crimes by month.
+crimes.by.month <-
+  crime.data %>% 
+  select( year, month ) %>%   
+  filter( year != 2015 ) %>%
+  filter( year <= 2020 ) %>%
+  filter( !is.na( year ) ) %>% 
+  group_by( year, month ) %>% 
+  summarize( counts = n() ) %>% 
+  arrange( match( month, month.name ) ) 
+crimes.by.month$month <-factor( crimes.by.month$month,levels = month.name )
+crimes.by.month$month <-factor( month.abb[crimes.by.month$month],levels = month.abb )
+
+# Create crimes by type by month object.
+crimes.type.by.month <-
+  crime.data %>% 
+  select( year, month, UCR.CRIME.CATEGORY ) %>%   
+  filter( year != 2015 ) %>%  
+  filter( year <= 2020 ) %>%
+  filter( !is.na( year ) ) %>% 
+  group_by( year, month, UCR.CRIME.CATEGORY ) %>% 
+  summarize( counts = n() ) %>% 
+  arrange( match( month, month.name ) ) %>% 
+  select( !month ) %>% 
+  mutate(crime.type = case_when(
+    UCR.CRIME.CATEGORY == "AGGRAVATED ASSAULT" ~ "Assault",
+    UCR.CRIME.CATEGORY == "ARSON" ~ "Arson",
+    UCR.CRIME.CATEGORY == "BURGLARY" ~ "Burglary",
+    UCR.CRIME.CATEGORY == "DRUG OFFENSE" ~ "Drugs",
+    UCR.CRIME.CATEGORY == "LARCENY-THEFT" ~ "Theft",
+    UCR.CRIME.CATEGORY == "MURDER AND NON-NEGLIGENT MANSLAUGHTER" ~ "Homicide",
+    UCR.CRIME.CATEGORY == "MOTOR VEHICLE THEFT" ~ "MV Theft",
+    UCR.CRIME.CATEGORY == "RAPE" ~ "Rape",
+    UCR.CRIME.CATEGORY == "ROBBERY" ~ "Robbery" ) )
+crimes.type.by.month$month <-factor( crimes.type.by.month$month,levels = month.name )
+crimes.type.by.month$month <-factor( month.abb[crimes.type.by.month$month],levels = month.abb )
+
+```
+
+<br>
+
+In a prior post, I discuss general trends in [crime in Phoenix](https://jacobtnyoung.github.io/R2PhX/projects/PHXcrime_trends.html). In this post, I want to focus more attention on changes observed for 2020 and draw attention to the considerable decline in crime relative to other years. If you are interested in the most recent analysis of crime data, take a look at my [crime types in Phoenix](https://jacobtnyoung.github.io/R2PhX/projects/PHXcrime_types.html) page that is routinely updated.
+
+Here, I want to further unpack the trends by focusing on crime types.
+
+*Note: as with other posts, just click the tab to see the code*...
+
+<br><br>
+
+### Monthly Counts over the Years {.tabset}
+
+<br>
+
+#### 
+
+<br>
+
+Let's pull the most recent data for **crime incidents** from the site.
+
+The data are reported as UCR crime classifications and have geographic information (block address, zip) as well as the date and time of the incident. As of `r format(Sys.time(), '%B, %Y')`, there were `r comma(n.cases)` crime incidents with complete data from 11/2015 to within a week of the current date. Since we are focusing on 2020, we will delete the data for 2021 and forward.    
+
+Let's start by looking at the monthly count of incidents over all crime types.
+  
+<br>
+
+```{r, echo=FALSE, eval=TRUE}
+
+p1 <- crimes.by.month %>% 
+  ggplot( aes( month, counts, group = 1 ) ) +
+  geom_point( ) +
+  geom_line( ) +
+  facet_grid( ~ year , scales="free" ) +
+  theme( axis.text.x=element_blank() ) +
+  xlab( "Month" )
+
+p1
+
+```
+
+As the plot shows, there is a large drop in reported incidents from March 2020-June 2020 with an increase going into the end of 2020. The plot below shows these same counts broken down by type of incident reported.  
+
+<br>
+
+If we focus on 2020, we can see that the pronounced drop in reported incidents from March 2020-June 2020 is mainly driven by **Robbery** and **Theft**. 
+
+```{r, echo=FALSE, eval=TRUE}
+
+p2 <- crimes.type.by.month %>% 
+  ggplot( aes( month, counts, group = 1 ) ) +
+  geom_point( ) +
+  geom_line( ) +
+  facet_grid( crime.type ~ year, scales="free" ) +
+  theme( axis.text.x=element_blank(), 
+         strip.text.x = element_text( size = 15 ),
+         strip.text.y = element_text( size = 12 ) ) +
+  xlab( "Month" )
+
+p2
+
+```
+
+<br>
+
+#### Getting the data (**code**)
+
+```{r, echo = TRUE, eval = FALSE}
+
+library( dplyr )
+library( tidyr )
+library( ggplot2 )
+library( forecast )
+library( gridExtra )
+
+# Get the data.
+url <- "https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crimestat.csv"
+crime.data <- read.csv( url, as.is = TRUE, header = TRUE )
+crime.data <- na.omit( crime.data )
+
+# Clean up the dates.
+date.vec <- strptime( crime.data$OCCURRED.ON, format="%m/%d/%Y %H:%M" )
+crime.data$year   <- format( date.vec, format="%Y" )
+crime.data$month  <- format( date.vec, format="%B" )
+
+# Drop cases for the most recent month.
+crime.data <- crime.data[ ! ( 
+  crime.data$month == format( Sys.Date(), format="%B" ) &
+  crime.data$year == format( Sys.Date(), format="%Y" ) 
+  ) , ]
+
+# Crimes by month.
+crimes.by.month <-
+  crime.data %>% 
+  select( year, month ) %>%   
+  filter( year != 2015 ) %>%
+  filter( year >= 2020 ) %>%
+  filter( !is.na( year ) ) %>% 
+  group_by( year, month ) %>% 
+  summarize( counts = n() ) %>% 
+  arrange( match( month, month.name ) ) 
+crimes.by.month$month <-factor( crimes.by.month$month,levels = month.name )
+crimes.by.month$month <-factor( month.abb[crimes.by.month$month],levels = month.abb )
+
+# Create crimes by type by month object.
+crimes.type.by.month <-
+  crime.data %>% 
+  select( year, month, UCR.CRIME.CATEGORY ) %>%   
+  filter( year != 2015 ) %>%  
+  filter( year >= 2020 ) %>%
+  filter( !is.na( year ) ) %>% 
+  group_by( year, month, UCR.CRIME.CATEGORY ) %>% 
+  summarize( counts = n() ) %>% 
+  arrange( match( month, month.name ) ) %>% 
+  select( !month ) %>% 
+  mutate(crime.type = case_when(
+    UCR.CRIME.CATEGORY == "AGGRAVATED ASSAULT" ~ "Assault",
+    UCR.CRIME.CATEGORY == "ARSON" ~ "Arson",
+    UCR.CRIME.CATEGORY == "BURGLARY" ~ "Burglary",
+    UCR.CRIME.CATEGORY == "DRUG OFFENSE" ~ "Drugs",
+    UCR.CRIME.CATEGORY == "LARCENY-THEFT" ~ "Theft",
+    UCR.CRIME.CATEGORY == "MURDER AND NON-NEGLIGENT MANSLAUGHTER" ~ "Homicide",
+    UCR.CRIME.CATEGORY == "MOTOR VEHICLE THEFT" ~ "MV Theft",
+    UCR.CRIME.CATEGORY == "RAPE" ~ "Rape",
+    UCR.CRIME.CATEGORY == "ROBBERY" ~ "Robbery" ) )
+crimes.type.by.month$month <-factor( crimes.type.by.month$month,levels = month.name )
+crimes.type.by.month$month <-factor( month.abb[crimes.type.by.month$month],levels = month.abb )
+```
+
+<br>
+
+#### Plotting the data (**code**)
+
+```{r, echo=TRUE, eval=FALSE}
+p1 <- crimes.by.month %>% 
+  ggplot( aes( month, counts, group = 1 ) ) +
+  geom_point( ) +
+  geom_line( ) +
+  facet_grid( ~ year , scales="free" ) +
+  theme( axis.text.x=element_blank() ) +
+  xlab( "Month" )
+p1
+
+p2 <- crimes.type.by.month %>% 
+  ggplot( aes( month, counts, group = 1 ) ) +
+  geom_point( ) +
+  geom_line( ) +
+  facet_grid( crime.type ~ year, scales="free" ) +
+  theme( axis.text.x=element_blank(), 
+         strip.text.x = element_text( size = 15 ),
+         strip.text.y = element_text( size = 12 ) ) +
+  xlab( "Month" )
+p2
+```
+
+<br>
+
+### What crimes declined in 2020? {.tabset}
+
+<br>
+
+#### 
+
+<br>
+
+To see this more clearly, let's just take a look at 2020.
+
+```{r, echo=FALSE, eval=TRUE}
+
+p2020 <- crimes.by.month %>% 
+  filter( year == 2020 ) %>%  # take just the 2020 data.
+  ggplot( aes( month, counts, group = 1 ) ) +
+  geom_point( ) +
+  geom_line( ) +
+  xlab( "Month" )
+
+p2020t <- crimes.type.by.month %>% 
+  filter( year == 2020 ) %>%  # take just the 2020 data.
+  ggplot( aes( month, counts, group = 1 ) ) +
+  geom_point( ) +
+  geom_line( ) +
+  facet_grid( rows = vars( crime.type ), scales="free" ) +
+  theme( #axis.text.x=element_blank(), 
+         #strip.text.x = element_text( size = 15 ),
+         strip.text.y = element_text( size = 8 ) ) +
+  xlab( "Month" )
+
+grid.arrange(
+  p2020 +
+    geom_rect( aes( xmin=3, xmax=6, ymin=min( crimes.by.month$counts ), ymax=Inf ), alpha = 0.02, fill = "blue" ) ,
+  p2020t +
+    geom_rect( aes( xmin=3, xmax=6, ymin=-Inf, ymax=Inf ), alpha = 0.02, fill = "blue" ) ,
+ncol = 2 )
+
+```
+
+Now we can see the trends a bit more clearly. From March-June (the shaded area), decreases are seen for **Burglary**, **Drugs**, **Motor Vehicle (MV) Theft**, **Robbery**, and **Theft**. These changes make sense as they mainly reflect either *property* or interaction with strangers, *routine activities*.
+
+<br>
+
+*Interestingly* (but probably not surprisingly), this period shows an *increase* in the incidents of crime for **Assault** and **Homicide** (and **Arson**). This also makes sense, in that individuals are spending more time with those they know and in confined locations.  
+
+<br>
+
+These changes largely follow the [stay at home order](https://azgovernor.gov/governor/news/2020/03/stay-home-stay-healthy-stay-connected) that began on March, 31st 2020 and ran through mid-May 2020.
+
+<br>
+
+#### Plotting the data (**code**)
+
+```{r, echo=TRUE, eval=FALSE}
+p2020 <- crimes.by.month %>% 
+  filter( year == 2020 ) %>%  # take just the 2020 data.
+  ggplot( aes( month, counts, group = 1 ) ) +
+  geom_point( ) +
+  geom_line( ) +
+  xlab( "Month" )
+
+p2020t <- crimes.type.by.month %>% 
+  filter( year == 2020 ) %>%  # take just the 2020 data.
+  ggplot( aes( month, counts, group = 1 ) ) +
+  geom_point( ) +
+  geom_line( ) +
+  facet_grid( rows = vars( crime.type ), scales="free" ) +
+  theme( #axis.text.x=element_blank(), 
+    #strip.text.x = element_text( size = 15 ),
+    strip.text.y = element_text( size = 8 ) ) +
+  xlab( "Month" )
+
+grid.arrange(
+  p2020 +
+    geom_rect( aes( xmin=3, xmax=6, ymin=min( crimes.by.month$counts ), ymax=Inf ), alpha = 0.02, fill = "blue" ) ,
+  p2020t +
+    geom_rect( aes( xmin=3, xmax=6, ymin=-Inf, ymax=Inf ), alpha = 0.02, fill = "blue" ) ,
+  ncol = 2 )
+```
+
+<br>
+
+### What about the increase in 2020? {.tabset}
+
+<br>
+
+#### 
+
+<br>
+
+Inspection of the 2020 data aggregated over crime types indicates that by the end of 2020, we were roughly back to the same level of crime incidents being reported as the beginning of the year. 
+
+Looking at the plots, we can see what types of crimes drove this increase.
+
+```{r, echo=FALSE, eval=TRUE}
+
+grid.arrange(
+  p2020 +
+    geom_rect( aes( xmin=6, xmax=12, ymin=min( crimes.by.month$counts ), ymax=Inf ), alpha = 0.02, fill = "red" ) ,
+  p2020t +
+    geom_rect( aes( xmin=6, xmax=12, ymin=-Inf, ymax=Inf ), alpha = 0.02, fill = "red" ) ,
+ncol = 2 )
+
+```
+
+Increase were mainly driven by an increase, *initially*, in **Drugs**. Later period increase was mainly driven by **Robbery**, **Motor Vehicle (MV) Theft**, and **Theft**. Gradual increases were seen for **Burglary**.
+
+<br>
+
+#### Plotting the data (**code**)
+
+```{r, echo=TRUE, eval=FALSE}
+
+grid.arrange(
+  p2020 +
+    geom_rect( aes( xmin=6, xmax=12, ymin=min( crimes.by.month$counts ), ymax=Inf ), alpha = 0.02, fill = "red" ) ,
+  p2020t +
+    geom_rect( aes( xmin=6, xmax=12, ymin=-Inf, ymax=Inf ), alpha = 0.02, fill = "red" ) ,
+ncol = 2 )
+
+```
+
+<br>
+
+### Difference from 2019? {.tabset}
+
+<br>
+
+#### 
+
+<br>
+
+```{r, echo=FALSE, eval=TRUE}
+
+p2019 <- crimes.by.month %>% 
+  filter( year == 2019 ) %>%  # take just the 2019 data.
+  ggplot( aes( month, counts, group = 1 ) ) +
+  geom_point( ) +
+  geom_line( ) +
+  xlab( "Month" )
+
+p2019t <- crimes.type.by.month %>% 
+  filter( year == 2019 ) %>%  # take just the 2019 data.
+  ggplot( aes( month, counts, group = 1 ) ) +
+  geom_point( ) +
+  geom_line( ) +
+  facet_grid( rows = vars( crime.type ), scales="free" ) +
+  theme( #axis.text.x=element_blank(), 
+         #strip.text.x = element_text( size = 15 ),
+         strip.text.y = element_text( size = 8 ) ) +
+  xlab( "Month" )
+
+grid.arrange(
+  p2019 +
+    geom_rect( aes( xmin=3, xmax=6, ymin=min( crimes.by.month$counts ), ymax=Inf ), alpha = 0.02, fill = "blue" ) ,
+  p2020 +
+    geom_rect( aes( xmin=3, xmax=6, ymin=min( crimes.by.month$counts ), ymax=Inf ), alpha = 0.02, fill = "blue" ) ,
+  p2019t +
+    geom_rect( aes( xmin=3, xmax=6, ymin=-Inf, ymax=Inf ), alpha = 0.02, fill = "blue" ) ,
+  p2020t +
+    geom_rect( aes( xmin=3, xmax=6, ymin=-Inf, ymax=Inf ), alpha = 0.02, fill = "blue" ) ,
+ncol = 2, nrow = 2 )
+
+```
+
+<br>
+
+#### Plotting the data (**code**)
+
+```{r, echo=TRUE, eval=FALSE}
+
+p2019 <- crimes.by.month %>% 
+  filter( year == 2019 ) %>%  # take just the 2019 data.
+  ggplot( aes( month, counts, group = 1 ) ) +
+  geom_point( ) +
+  geom_line( ) +
+  xlab( "Month" )
+
+p2019t <- crimes.type.by.month %>% 
+  filter( year == 2019 ) %>%  # take just the 2019 data.
+  ggplot( aes( month, counts, group = 1 ) ) +
+  geom_point( ) +
+  geom_line( ) +
+  facet_grid( rows = vars( crime.type ), scales="free" ) +
+  theme( #axis.text.x=element_blank(), 
+         #strip.text.x = element_text( size = 15 ),
+         strip.text.y = element_text( size = 8 ) ) +
+  xlab( "Month" )
+
+grid.arrange(
+  p2019 +
+    geom_rect( aes( xmin=3, xmax=6, ymin=min( crimes.by.month$counts ), ymax=Inf ), alpha = 0.02, fill = "blue" ) ,
+  p2020 +
+    geom_rect( aes( xmin=3, xmax=6, ymin=min( crimes.by.month$counts ), ymax=Inf ), alpha = 0.02, fill = "blue" ) ,
+  p2019t +
+    geom_rect( aes( xmin=3, xmax=6, ymin=-Inf, ymax=Inf ), alpha = 0.02, fill = "blue" ) ,
+  p2020t +
+    geom_rect( aes( xmin=3, xmax=6, ymin=-Inf, ymax=Inf ), alpha = 0.02, fill = "blue" ) ,
+ncol = 2, nrow = 2 )
+
+```
+
+<br>
+
+###
+
+<br>
+
+<p align="center">
+[Back to R 2 Phoenix page](https://jacobtnyoung.github.io/R2PhX/)
+</p>
+
+<br>
+
+***Please*** report any needed corrections to the [Issues](https://github.com/jacobtnyoung/R2PhX/issues/new) page. Thanks!
+
+<br><br>
+
+<p align="center">
+***Last updated `r format(Sys.time(), '%d %B, %Y')`***
+</p>
+
+<br>
