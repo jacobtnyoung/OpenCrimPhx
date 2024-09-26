@@ -26,6 +26,45 @@ crimeRatesMonthType  <- readRDS( here( "data/crimeRatesMonthType.rds" ) )
 
 
 
+!!!HERE: just grab the dashboard from 526
+
+
+
+d5 <- crimeData
+
+
+leaflet( d5 ) |>  
+  
+  addProviderTiles( "CartoDB.Positron" ) |> 
+  
+  setView( lng = -112.074036, 
+           lat = 33.448376, 
+           zoom = 13 ) |> 
+  
+  addCircles( lng = d5$long, 
+              lat = d5$lat,
+              fillOpacity = 0.5, 
+              stroke = FALSE,
+              clusterOptions = markerClusterOptions()
+  ) 
+
+
+
+library(leaflet.extras)
+leaflet(data = your_data) %>%
+  addTiles() %>%
+  addHeatmap(lng = ~lon, lat = ~lat, intensity = ~value, blur = 20, max = 0.05)
+
+
+
+
+
+
+
+
+
+
+
 # set Phoenix boundary ----------------------------------------------------
 
 # Some of the lat/long is outside the boundary of phoenix
