@@ -95,8 +95,8 @@ crimeGeo <- function( crimeDat, filterYear ){
   # take the results and create a dataframe
   results <- data.frame( 
     Address.zip = character(), 
-    lat = numeric(),
-    long = numeric(),
+    Latitude = numeric(),
+    Longitude = numeric(),
     stringsAsFactors = FALSE 
   )
   
