@@ -105,8 +105,8 @@ crimeGeo <- function( crimeDat, filterYear ){
     # Extract the address and lat elements
     temp_df <- data.frame(
       Address.zip = spatial_results[[i]]$address,
-      lat = spatial_results[[i]]$lat,
-      long = spatial_results[[i]]$long
+      Latitude = spatial_results[[i]]$lat,
+      Longitude = spatial_results[[i]]$long
     )
     
     # Add the rows to the existing data frame
