@@ -76,6 +76,9 @@ crimeData$month  <- format( date.vec, format="%B" )
 crimeData$day365 <- format( date.vec, format="%j" )
 crimeData$week   <- format( date.vec, format="%V" )
 
+# now we want to clean up the times
+crimeData$hour   <- format(date.vec, format = "%H") %>% as.numeric()
+
 # clean up the variable classifying the cases
 crimeData <- 
   crimeData %>% 

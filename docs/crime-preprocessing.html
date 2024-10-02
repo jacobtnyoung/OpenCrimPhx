@@ -328,6 +328,9 @@ crimeData$month  &lt;- format( date.vec, format=&quot;%B&quot; )
 crimeData$day365 &lt;- format( date.vec, format=&quot;%j&quot; )
 crimeData$week   &lt;- format( date.vec, format=&quot;%V&quot; )
 
+# now we want to clean up the times
+crimeData$hour   &lt;- format(date.vec, format = &quot;%H&quot;) %&gt;% as.numeric()
+
 # clean up the variable classifying the cases
 crimeData &lt;- 
   crimeData %&gt;% 
