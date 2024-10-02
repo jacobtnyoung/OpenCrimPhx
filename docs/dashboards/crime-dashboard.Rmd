@@ -38,19 +38,7 @@ library( flexdashboard ) # for the dashboard
 crimeData       <- readRDS( here( "data/crimeData.rds" ) )
 
 
-!!!HERE: need to rerun the geo script to create the variable with the new names; that takes
-a while to pull all the census stuff so you didn't rerun it
-
-
-
-# READ IN DATA
-
-url <- paste0("https://github.com/DS4PS/Data-",
-              "Science-Class/blob/master/DATA",
-              "/TempeTrafficAccidents.rds?raw=true")
-
-dat <- readRDS(gzcon(url(url)))
-
+!!!HERE: with working through the code for this
 
 
 # DATA PREPROCESSING I: INJURIES & FATALITIES
