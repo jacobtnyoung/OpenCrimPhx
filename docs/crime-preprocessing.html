@@ -372,7 +372,7 @@ href="/Users/jyoung20/ASU%20Dropbox/Jacob%20Young/GitHub_repos/OpenCrimPhx/utils
 file.</p>
 <p><br></p>
 <pre class="r"><code>import::here( &quot;phoenixPopDat&quot;,
-              .from = here::here( &quot;utils/phoenix-population.R&quot; ),
+              .from = here::here( &quot;docs/utils/phoenix-population.R&quot; ),
               .character_only = TRUE )</code></pre>
 <p><br></p>
 <p>We now have an object, <code>phoenixPopDat</code> that is the yearly
@@ -387,7 +387,7 @@ an estimate, not that reported to the Census Bureau.</p>
 <a href="">crime-geo.R</a> script. It uses the Census API to pull
 coordinate data.</p>
 <pre class="r"><code># get the file
-crimeDatGeo &lt;- readRDS( here( &quot;data/data-geo/crimeDatGeo2016-2024.rds&quot; ) )
+crimeDatGeo &lt;- readRDS( here( &quot;docs/data/data-geo/crimeDatGeo2016-2024.rds&quot; ) )
 
 # merge the geographic data with the cases
 crimeData &lt;- left_join( crimeData, crimeDatGeo, by = &quot;INC.NUMBER&quot; )</code></pre>
@@ -520,23 +520,24 @@ analysis on separate pages.</p>
 <p><br></p>
 <pre class="r"><code># save the objects as .rds files
 
-saveRDS( crimeData,       file = here( &quot;data/crimeData.rds&quot; ) )
-saveRDS( crimesByDay,     file = here( &quot;data/crimesByDay.rds&quot; ) )
-saveRDS( crimesByMonth,   file = here( &quot;data/crimesByMonth.rds&quot; ) )
-saveRDS( crimesByYear,    file = here( &quot;data/crimesByYear.rds&quot; ) )
-saveRDS( crimeRatesMonth, file = here( &quot;data/crimeRatesMonth.rds&quot; ) )
-saveRDS( crimeRatesYear,  file = here( &quot;data/crimeRatesYear.rds&quot; ) )
+saveRDS( crimeData,       file = here( &quot;docs/data/crimeData.rds&quot; ) )
+saveRDS( crimesByDay,     file = here( &quot;docs/data/crimesByDay.rds&quot; ) )
+saveRDS( crimesByMonth,   file = here( &quot;docs/data/crimesByMonth.rds&quot; ) )
+saveRDS( crimesByYear,    file = here( &quot;docs/data/crimesByYear.rds&quot; ) )
+saveRDS( crimeRatesMonth, file = here( &quot;docs/data/crimeRatesMonth.rds&quot; ) )
+saveRDS( crimeRatesYear,  file = here( &quot;docs/data/crimeRatesYear.rds&quot; ) )
 
 # crimes by type
-saveRDS( crimesByTypeByMonth, file = here( &quot;data/crimesByTypeByMonth.rds&quot; ) )
-saveRDS( crimesByTypeByYear , file = here( &quot;data/crimesByTypeByYear.rds&quot; ) )
-saveRDS( crimeRatesMonthType, file = here( &quot;data/crimeRatesMonthType.rds&quot; ) )
-saveRDS( crimeRatesYearType , file = here( &quot;data/crimeRatesMonthYear.rds&quot; ) )</code></pre>
+saveRDS( crimesByTypeByMonth, file = here( &quot;docs/data/crimesByTypeByMonth.rds&quot; ) )
+saveRDS( crimesByTypeByYear , file = here( &quot;docs/data/crimesByTypeByYear.rds&quot; ) )
+saveRDS( crimeRatesMonthType, file = here( &quot;docs/data/crimeRatesMonthType.rds&quot; ) )
+saveRDS( crimeRatesYearType , file = here( &quot;docs/data/crimeRatesMonthYear.rds&quot; ) )</code></pre>
 <p>If you look in the <a
-href="https://jacobtnyoung.github.io/OpenCrimPhx/data">data</a> folder
-for the repository, you will see that these files have been added. When
-I run this script, I have to push these files to the repository. But, we
-can now reference them using the <code>readRDS()</code> function.</p>
+href="https://jacobtnyoung.github.io/OpenCrimPhx/docs/data">data</a>
+folder for the repository, you will see that these files have been
+added. When I run this script, I have to push these files to the
+repository. But, we can now reference them using the
+<code>readRDS()</code> function.</p>
 <p><br></p>
 </div>
 <div id="next-steps" class="section level2">

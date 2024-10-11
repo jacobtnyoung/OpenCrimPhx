@@ -26,7 +26,7 @@ rm( list = ls() )
 
 library( here )
 
-loc <- "data/ois_ois-individual-summary_oisindividual.csv"
+loc <- "docs/data/ois_ois-individual-summary_oisindividual.csv"
 shooting.data <- read.csv( here( loc ), as.is = TRUE, header = TRUE )
 #shooting.data <- na.omit( shooting.data )
 

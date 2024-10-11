@@ -30,7 +30,7 @@ This page takes a look at trends in unemployment using data from the [Bureau of 
 
 To get going, we will load all the libraries we need. The code to generate everything you see here is hidden (to reduce clutter). But, if you want to see “how we get there”, just click the “Show” button on the right. 
 
-Next, we will load the data. These files are available in the [data](https://jacobtnyoung.github.io/OpenCrimPhx/data/data) folder for the repository.
+Next, we will load the data. These files are available in the [data](https://jacobtnyoung.github.io/OpenCrimPhx/docs/data) folder for the repository.
 
 
 ```{r}
@@ -49,14 +49,14 @@ library( here )     # for referencing the local directory
 
 
 # define the objects
-crimeData       <- readRDS( here( "data/crimeData.rds" ) )
-crimesByDay     <- readRDS( here( "data/crimesByDay.rds" ) )
-crimesByMonth   <- readRDS( here( "data/crimesByMonth.rds" ) )
-crimesByYear    <- readRDS( here( "data/crimesByYear.rds" ) )
-crimeRatesMonth <- readRDS( here( "data/crimeRatesMonth.rds" ) )
-crimeRatesYear  <- readRDS( here( "data/crimeRatesYear.rds" ) )
+crimeData       <- readRDS( here( "docs/data/crimeData.rds" ) )
+crimesByDay     <- readRDS( here( "docs/data/crimesByDay.rds" ) )
+crimesByMonth   <- readRDS( here( "docs/data/crimesByMonth.rds" ) )
+crimesByYear    <- readRDS( here( "docs/data/crimesByYear.rds" ) )
+crimeRatesMonth <- readRDS( here( "docs/data/crimeRatesMonth.rds" ) )
+crimeRatesYear  <- readRDS( here( "docs/data/crimeRatesYear.rds" ) )
 
-crimeRatesMonthType  <- readRDS( here( "data/crimeRatesMonthType.rds" ) )
+crimeRatesMonthType  <- readRDS( here( "docs/data/crimeRatesMonthType.rds" ) )
 
 ```
 

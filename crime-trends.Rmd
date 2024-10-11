@@ -55,14 +55,14 @@ library( here )     # for referencing the local directory
 
 
 # define the objects
-crimeData       <- readRDS( here( "data/crimeData.rds" ) )
-crimesByDay     <- readRDS( here( "data/crimesByDay.rds" ) )
-crimesByMonth   <- readRDS( here( "data/crimesByMonth.rds" ) )
-crimesByYear    <- readRDS( here( "data/crimesByYear.rds" ) )
-crimeRatesMonth <- readRDS( here( "data/crimeRatesMonth.rds" ) )
-crimeRatesYear  <- readRDS( here( "data/crimeRatesYear.rds" ) )
+crimeData       <- readRDS( here( "docs/data/crimeData.rds" ) )
+crimesByDay     <- readRDS( here( "docs/data/crimesByDay.rds" ) )
+crimesByMonth   <- readRDS( here( "docs/data/crimesByMonth.rds" ) )
+crimesByYear    <- readRDS( here( "docs/data/crimesByYear.rds" ) )
+crimeRatesMonth <- readRDS( here( "docs/data/crimeRatesMonth.rds" ) )
+crimeRatesYear  <- readRDS( here( "docs/data/crimeRatesYear.rds" ) )
 
-crimeRatesMonthType  <- readRDS( here( "data/crimeRatesMonthType.rds" ) )
+crimeRatesMonthType  <- readRDS( here( "docs/data/crimeRatesMonthType.rds" ) )
 
 ```
 
