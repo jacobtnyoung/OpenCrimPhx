@@ -120,7 +120,7 @@ The rates are computed using population data from the [Census Bureau](https://ww
 ```{r}
 
 import::here( "phoenixPopDat",
-              .from = here::here( "docs/utils/phoenix-population.R" ),
+              .from = here::here( "utils/phoenix-population.R" ),
               .character_only = TRUE )
 
 ```
@@ -138,7 +138,7 @@ We can append the geographic data for the data. This piece calls the [crimeDatGe
 ```{r}
 
 # get the file
-crimeDatGeo <- readRDS( here( "docs/data/data-geo/crimeDatGeo2016-2024.rds" ) )
+crimeDatGeo <- readRDS( here( "data/data-geo/crimeDatGeo2016-2024.rds" ) )
 
 # merge the geographic data with the cases
 crimeData <- left_join( crimeData, crimeDatGeo, by = "INC.NUMBER" )
@@ -292,23 +292,23 @@ We can now save the objects as a file that can be referenced for analysis on sep
 
 # save the objects as .rds files
 
-saveRDS( crimeData,       file = here( "docs/data/crimeData.rds" ) )
-saveRDS( crimesByDay,     file = here( "docs/data/crimesByDay.rds" ) )
-saveRDS( crimesByMonth,   file = here( "docs/data/crimesByMonth.rds" ) )
-saveRDS( crimesByYear,    file = here( "docs/data/crimesByYear.rds" ) )
-saveRDS( crimeRatesMonth, file = here( "docs/data/crimeRatesMonth.rds" ) )
-saveRDS( crimeRatesYear,  file = here( "docs/data/crimeRatesYear.rds" ) )
+saveRDS( crimeData,       file = here( "data/crimeData.rds" ) )
+saveRDS( crimesByDay,     file = here( "data/crimesByDay.rds" ) )
+saveRDS( crimesByMonth,   file = here( "data/crimesByMonth.rds" ) )
+saveRDS( crimesByYear,    file = here( "data/crimesByYear.rds" ) )
+saveRDS( crimeRatesMonth, file = here( "data/crimeRatesMonth.rds" ) )
+saveRDS( crimeRatesYear,  file = here( "data/crimeRatesYear.rds" ) )
 
 # crimes by type
-saveRDS( crimesByTypeByMonth, file = here( "docs/data/crimesByTypeByMonth.rds" ) )
-saveRDS( crimesByTypeByYear , file = here( "docs/data/crimesByTypeByYear.rds" ) )
-saveRDS( crimeRatesMonthType, file = here( "docs/data/crimeRatesMonthType.rds" ) )
-saveRDS( crimeRatesYearType , file = here( "docs/data/crimeRatesMonthYear.rds" ) )
+saveRDS( crimesByTypeByMonth, file = here( "data/crimesByTypeByMonth.rds" ) )
+saveRDS( crimesByTypeByYear , file = here( "data/crimesByTypeByYear.rds" ) )
+saveRDS( crimeRatesMonthType, file = here( "data/crimeRatesMonthType.rds" ) )
+saveRDS( crimeRatesYearType , file = here( "data/crimeRatesMonthYear.rds" ) )
 
 
 ```
 
-If you look in the [data](https://jacobtnyoung.github.io/OpenCrimPhx/docs/data) folder for the repository, you will see that these files have been added. When I run this script, I have to push these files to the repository. But, we can now reference them using the `readRDS()` function.
+If you look in the [data](https://jacobtnyoung.github.io/OpenCrimPhx/data) folder for the repository, you will see that these files have been added. When I run this script, I have to push these files to the repository. But, we can now reference them using the `readRDS()` function.
 
 <br>
 

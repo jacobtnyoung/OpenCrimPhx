@@ -298,8 +298,8 @@ generate everything you see here is hidden (to reduce clutter). But, if
 you want to see “how we get there”, just click the “Show” button on the
 right.</p>
 <p>Next, we will load the data. These files are available in the <a
-href="https://jacobtnyoung.github.io/OpenCrimPhx/docs/data">data</a>
-folder for the repository.</p>
+href="https://jacobtnyoung.github.io/OpenCrimPhx/data">data</a> folder
+for the repository.</p>
 <pre class="r"><code># clear workspace
 rm( list = ls() )
 
@@ -314,14 +314,14 @@ library( here )     # for referencing the local directory
 
 
 # define the objects
-crimeData       &lt;- readRDS( here( &quot;docs/data/crimeData.rds&quot; ) )
-crimesByDay     &lt;- readRDS( here( &quot;docs/data/crimesByDay.rds&quot; ) )
-crimesByMonth   &lt;- readRDS( here( &quot;docs/data/crimesByMonth.rds&quot; ) )
-crimesByYear    &lt;- readRDS( here( &quot;docs/data/crimesByYear.rds&quot; ) )
-crimeRatesMonth &lt;- readRDS( here( &quot;docs/data/crimeRatesMonth.rds&quot; ) )
-crimeRatesYear  &lt;- readRDS( here( &quot;docs/data/crimeRatesYear.rds&quot; ) )
+crimeData       &lt;- readRDS( here( &quot;data/crimeData.rds&quot; ) )
+crimesByDay     &lt;- readRDS( here( &quot;data/crimesByDay.rds&quot; ) )
+crimesByMonth   &lt;- readRDS( here( &quot;data/crimesByMonth.rds&quot; ) )
+crimesByYear    &lt;- readRDS( here( &quot;data/crimesByYear.rds&quot; ) )
+crimeRatesMonth &lt;- readRDS( here( &quot;data/crimeRatesMonth.rds&quot; ) )
+crimeRatesYear  &lt;- readRDS( here( &quot;data/crimeRatesYear.rds&quot; ) )
 
-crimeRatesMonthType  &lt;- readRDS( here( &quot;docs/data/crimeRatesMonthType.rds&quot; ) )</code></pre>
+crimeRatesMonthType  &lt;- readRDS( here( &quot;data/crimeRatesMonthType.rds&quot; ) )</code></pre>
 <p><br></p>
 <p>First, load the unemployment data. This makes a call to the <a
 href="https://www.bls.gov/">Bureau of Labor Statistics</a> API.</p>
