@@ -138,7 +138,7 @@ We can append the geographic data for the data. This piece calls the [crimeDatGe
 ```{r}
 
 # get the file
-crimeDatGeo <- readRDS( here( "data/data-geo/crimeDatGeo2016-2024.rds" ) )
+crimeDatGeo <- readRDS( here( "docs/data/data-geo/crimeDatGeo2016-2024.rds" ) )
 
 # merge the geographic data with the cases
 crimeData <- left_join( crimeData, crimeDatGeo, by = "INC.NUMBER" )
@@ -308,7 +308,7 @@ saveRDS( crimeRatesYearType , file = here( "data/crimeRatesMonthYear.rds" ) )
 
 ```
 
-If you look in the [data](https://jacobtnyoung.github.io/OpenCrimPhx/data) folder for the repository, you will see that these files have been added. When I run this script, I have to push these files to the repository. But, we can now reference them using the `readRDS()` function.
+If you look in the [data](https://jacobtnyoung.github.io/OpenCrimPhx/docs/data) folder for the repository, you will see that these files have been added. When I run this script, I have to push these files to the repository. But, we can now reference them using the `readRDS()` function.
 
 <br>
 
