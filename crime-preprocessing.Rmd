@@ -314,7 +314,7 @@ If you look in the [data](https://jacobtnyoung.github.io/OpenCrimPhx/data) folde
 
 ## Next steps...  
 
-Now that the data are pre-processed, we can reference this object when we conduct analyses. Visit the [Crime in Phoenix)](https://jacobtnyoung.github.io/OpenCrimPhx/crime.html) page to see these analyses.  
+Now that the data are pre-processed, we can reference this object when we conduct analyses. Visit the [Crime in Phoenix](https://jacobtnyoung.github.io/OpenCrimPhx/crime.html) page to see these analyses.  
 
 ###
 
