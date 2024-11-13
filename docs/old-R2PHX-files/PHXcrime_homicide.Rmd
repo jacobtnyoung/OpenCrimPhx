@@ -1,0 +1,631 @@
+---
+title: "What is going on with homicide in Phoenix?"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    theme: yeti
+    toc: false
+    toc_float: false
+    collapsed: false
+    smooth_scroll: false
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set( echo = TRUE, 
+                      message = FALSE, 
+                      warning = FALSE, 
+                      fig.width = 12, 
+                      fig.height = 10 )
+
+```
+
+
+```{r, echo = FALSE, eval = TRUE, results = FALSE, fig.show = "hide"}
+ 
+# clear workspace.
+rm( list = ls() )
+
+# load libraries.
+library( dplyr )
+library( tidyr )
+library( tidyquant )
+library( ggplot2 )
+library( gridExtra )
+library( scales )
+library( forecast )
+library( openxlsx )
+library( here )
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+# Crime incidents.
+
+# Get the data.
+loc <- "data/data-raw/crime-data_crime-data_crimestat.csv"
+crime.data <- read.csv( here( loc ), as.is = TRUE, header = TRUE )
+crime.data <- na.omit( crime.data )
+
+# Help with formatting the text.
+n.cases <- dim( crime.data )[1]
+
+# Clean up the dates.
+date.vec <- strptime( crime.data$OCCURRED.ON, format="%m/%d/%Y %H:%M" )
+crime.data$year   <- format( date.vec, format="%Y" )
+crime.data$month  <- format( date.vec, format="%B" )
+crime.data$day365 <- format( date.vec, format="%j" )
+
+# Clean up the variable classifying the cases.
+crime.data <- 
+  crime.data %>% 
+  mutate( crime.type = case_when( 
+    UCR.CRIME.CATEGORY == "AGGRAVATED ASSAULT" ~ "Assault",
+    UCR.CRIME.CATEGORY == "ARSON" ~ "Arson",
+    UCR.CRIME.CATEGORY == "BURGLARY" ~ "Burglary",
+    UCR.CRIME.CATEGORY == "DRUG OFFENSE" ~ "Drugs",
+    UCR.CRIME.CATEGORY == "LARCENY-THEFT" ~ "Theft",
+    UCR.CRIME.CATEGORY == "MURDER AND NON-NEGLIGENT MANSLAUGHTER" ~ "Homicide",
+    UCR.CRIME.CATEGORY == "MOTOR VEHICLE THEFT" ~ "MV Theft",
+    UCR.CRIME.CATEGORY == "RAPE" ~ "Rape",
+    UCR.CRIME.CATEGORY == "ROBBERY" ~ "Robbery" ) )
+
+# Drop cases for the most recent month.
+crime.data <- crime.data[ ! ( 
+  crime.data$month == format( Sys.Date(), format="%B" ) &
+  crime.data$year == format( Sys.Date(), format="%Y" ) 
+  ) , ]
+
+# Select just the homicides.
+homicide.data <-
+  crime.data %>% 
+  filter( crime.type == "Homicide"  )
+
+# Help with formatting the text.
+n.homicide.cases <- dim( homicide.data )[1]
+
+# Create the object of homicides by day.
+homicides.by.day <- 
+  homicide.data %>% 
+  select( year, month, day365 ) %>%   
+  filter( !is.na( day365 ) ) %>% 
+  group_by( year, month, day365 ) %>% 
+  summarize( counts = n() ) %>% 
+  ungroup() %>% 
+  mutate( day.time = seq( 1, length( counts ) ) ) %>% 
+  select( counts, day.time ) %>% 
+  mutate( days = 
+            seq( 
+              as.Date( head( strptime( homicide.data$OCCURRED.ON, format="%m/%d/%Y %H:%M" ) ) )[1], 
+              as.Date( tail( strptime( homicide.data$OCCURRED.ON, format="%m/%d/%Y %H:%M" ) ) )[6], 
+              length.out = length( counts ) ) ) %>% 
+  arrange( day.time )
+
+homicides.by.day <- as.data.frame( homicides.by.day )
+
+# Homicides by month.
+homicides.by.month <- 
+  homicide.data %>% 
+  select( year, month ) %>%   
+  filter( year != 2015 ) %>%  
+  filter( !is.na( year ) ) %>% 
+  group_by( year, month ) %>% 
+  summarize( counts = n() ) %>% 
+  spread( year, counts ) %>% 
+  arrange( match( month, month.name ) ) %>% 
+  select( !month )
+
+# Crimes by month.
+homicide.by.month2 <-
+  homicide.data %>% 
+  select( year, month ) %>%   
+  filter( year != 2015 ) %>%
+  filter( !is.na( year ) ) %>% 
+  group_by( year, month ) %>% 
+  summarize( counts = n() ) %>% 
+  arrange( match( month, month.name ) ) 
+homicide.by.month2$month <-factor( homicide.by.month2$month,levels = month.name )
+homicide.by.month2$month <-factor( month.abb[homicide.by.month2$month],levels = month.abb )
+
+# Homicides by year.
+homicides.by.year <- 
+  homicide.data %>% 
+  select( year ) %>%   
+  filter( year != 2015 ) %>%  
+  filter( !is.na( year ) ) %>% 
+  group_by( year ) %>% 
+  summarize( counts = n() )
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+# Population data for Phoenix.
+
+# There are multiple files we need for the population data
+
+# get years 2016-2019
+pop.data.2016.2019 <- read.xlsx(
+  "https://www2.census.gov/programs-surveys/popest/tables/2010-2019/cities/totals/SUB-IP-EST2019-ANNRES-04.xlsx",
+  colNames = TRUE,
+  startRow = 4
+)
+
+# Find the row with the data for Phoenix
+grep("Phoenix", pop.data.2016.2019[,1])
+
+# It is the 55th row in the object
+phoenix.pop.2016.2019 <-  pop.data.2016.2019[55,]
+phoenix.pop.2016.2019
+
+# We only need the data for 2016-2019
+phoenix.pop.2016.2019 <- phoenix.pop.2016.2019[-c(1:9)]
+phoenix.pop.2016.2019
+
+# Repeat these steps for the 2020-2021 data
+pop.data.2020.2021 <- read.xlsx(
+  "https://www2.census.gov/programs-surveys/popest/tables/2020-2021/cities/totals/SUB-IP-EST2021-POP-04.xlsx",
+  colNames = TRUE,
+  startRow = 4
+)
+
+grep("Phoenix", pop.data.2020.2021[,1])
+
+phoenix.pop.2020.2021 <-  pop.data.2020.2021[55,]
+phoenix.pop.2020.2021
+
+phoenix.pop.2020.2021 <- phoenix.pop.2020.2021[-c(1:2)]
+phoenix.pop.2020.2021
+
+# combine the data into a single object
+phoenix.pop <- cbind( phoenix.pop.2016.2019, phoenix.pop.2020.2021 )
+phoenix.pop
+
+# Missing 2022 and 2023
+# Add the difference for each year until you get the actual demographic data
+phoenix.pop$"2022" <- phoenix.pop$"2021" + phoenix.pop$"2021" - phoenix.pop$"2020"
+phoenix.pop$"2023" <- phoenix.pop$"2022" + phoenix.pop$"2022" - phoenix.pop$"2021"
+
+# now we coerce the data to be numeric to use it below
+phoenix.pop.data <- as.numeric( phoenix.pop )
+phoenix.pop.data
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+# Create the rates using the population data.
+
+# now, calculate the homicide rate. Crime rate is calculated as the count of homicides divided by the population size, then multiplied by 100,000.
+
+homicide.rates <- as.data.frame( homicides.by.month )
+
+for ( i in 1: dim( homicide.rates )[2] ){
+ homicide.rates[,i] <- ( homicide.rates[,i] / phoenix.pop.data[i] ) * 100000
+}
+
+# calculate the homicide rate per year.
+homicide.rates.year <- as.data.frame( homicides.by.year )
+
+for ( i in 1: dim( homicide.rates.year )[1] ){
+ homicide.rates.year[i,2] <- ( homicide.rates.year[i,2] / phoenix.pop.data[i] ) * 100000
+}
+
+# Create the time series.
+monthly.homicides.by.year <- ts(
+  matrix( as.matrix( homicide.rates ), ncol = 1 ), 
+  start=c( 2016, 1 ), 
+  end=c( as.numeric( tail( names( homicide.rates ), n=1 ) ), 12 ), frequency=12
+)
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+# Build the plots you will present.
+
+homicides.by.day %>% 
+  ggplot( aes( days, counts ) ) +
+  geom_line( color = "grey80" ) +
+  geom_point( alpha = 1/5, color = "black" ) +
+  labs( x = "", y = "Counts of Homicide per Day" ) + 
+  ggtitle( "Daily Homicides in Phoenix, AZ" ) +
+  geom_smooth( color = "darkblue", span = 0.2 ) +
+  scale_y_continuous(label = comma) +
+  theme_minimal() 
+
+monthly.homicides.by.year %>% 
+  ggseasonplot(
+    year.labels=FALSE,
+    main = "Plot of Monthly Homicide Rate by Years for Phoenix",
+    col = rainbow( dim( homicide.rates )[2] ) ) + 
+  scale_y_continuous( label = comma ) +
+  geom_line( size = 1.2 ) +
+  theme_gray() 
+
+homicide.month.all <- 
+  homicide.by.month2 %>% 
+  ggplot( aes( month, counts, group = 1 ) ) +
+  geom_point( ) +
+  geom_line( ) +
+  facet_grid( ~ year , scales="free" ) +
+  theme( axis.text.x=element_blank() ) +
+  xlab( "Month" )
+
+homicide.month.all.year <- 
+  homicide.by.month2 %>% 
+  ggplot( aes( month, counts, group = 1 ) ) +
+  geom_point( ) +
+  geom_line( ) +
+  facet_grid( rows = vars( year ), scales="free" ) +
+  theme( #axis.text.x=element_blank(), 
+    #strip.text.x = element_text( size = 15 ),
+    strip.text.y = element_text( size = 8 ) ) +
+  xlab( "Month" )
+
+```
+
+<br>
+
+What do you think? Is homicide on the rise? Is homicide declining? Having a hard time answering that question (**and** *being confident about your answer*)?  
+
+As I discuss in a [different post](https://jacobtnyoung.github.io/R2PhX/projects/PHXcrime.html), crime trends are **very** difficult to assess, without seeing the data, because of the peculiar nature of crime and the huge delay in reporting of crime (because of the way it is collected). Getting a sense of whether homicide is increasing or decreasing is particularly hard due to the relative infrequency of the event in conjunction with the tendency for it to receive disproportionate attention in the media.
+
+In a [different post](https://jacobtnyoung.github.io/R2PhX/projects/PHXcrime_trends.html) I discussed the trends in incidents reported to the police over *all* crimes. Here, let's just focus on homicide.
+
+<br>
+
+*Note: as with other posts, just click the tab to see the code*...
+
+<br><br>
+
+### Daily Counts of **Homicide** from 2015-`r format(Sys.time(), '%Y')` {.tabset}
+
+<br>
+
+#### 
+
+<br>
+
+Let's pull the most recent data for **crime incidents** from the site.
+
+The data are reported as UCR crime classifications and have geographic information (block address, zip) as well as the date and time of the incident. As of `r format(Sys.time(), '%B, %Y')`, there were `r comma(n.cases)` crime incidents with complete data from 11/2015 to within a week of the current date.  
+
+We will select just **homicides**. In the data, these appear as `MURDER AND NON-NEGLIGENT MANSLAUGHTER`, but recoded as *homicide*. As of `r format(Sys.time(), '%B, %Y')`, there were `r comma(n.homicide.cases)` homicides reported from 11/2015 to within a week of the current date.
+
+Let's start by looking at the monthly count.
+  
+<br>
+
+```{r, echo = FALSE, eval = TRUE}
+
+homicides.by.day %>% 
+  ggplot( aes( days, counts ) ) +
+  geom_line( color = "grey80" ) +
+  geom_point( alpha = 1/5, color = "black" ) +
+  labs( x = "", y = "Counts of Homicide per Day" ) + 
+  ggtitle( "Daily Homicides in Phoenix, AZ" ) +
+  geom_smooth( color = "darkblue", span = 0.2 ) +
+  scale_y_continuous(label = comma) +
+  theme_minimal()  
+
+```
+
+<br>
+
+This plot is a bit difficult to visualize given the low frequency of events each day. *Note that days in which there are zero homicides reported are excluded from the plot*. 
+
+We can see that there was a substantive increase in homicide beginning in March of 2020. This was followed by a decline into 2021 and then a small increase later in the year.
+
+**But**, a major take-away from the plot is that the homicide level does appear to have had a sustained increase since mid-2020. The peak seen in October of 2020 is similar to the peak in October of 2017. 
+
+For a more in-depth examination of crime in 2020 and how it differed from 2019, check out this [analysis](https://jacobtnyoung.github.io/R2PhX/projects/PHXcrime_types_2020.html).
+<br>
+
+<br><br>
+
+#### Getting the data (**code**)  
+
+<br>
+
+```{r, echo = TRUE, eval = FALSE}
+
+# set the url where the data are located.
+url <- "https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crimestat.csv"
+
+# pull in the csv file.
+crime.data <- read.csv( url, as.is = TRUE, header = TRUE )
+
+# drop cases missing on date.
+crime.data <- na.omit( crime.data )
+
+# take a look at the data.
+head( crime.data )  
+
+``` 
+
+#### Preprocessing the data (**code**)  
+
+<br>
+
+Now that the data are in the workspace, let's clean up the date and the crime categories to make plotting them fairly easy. To do so, I am drawing from a [lab](https://ds4ps.org/cpp-526-sum-2020/labs/lab-05-instructions.html) from ASU's [Foundations of Data Science Part I](https://ds4ps.org/) course in the Program Evaluation and Data Analytics. See the "Working with Dates" section of the site. We will use the `strptime()` and `format()` functions here.
+
+<br>
+
+```{r, echo = TRUE, eval = TRUE}
+
+# The date and time variable is a character string.
+head( crime.data$OCCURRED.ON )
+is.character( crime.data$OCCURRED.ON )
+
+# Convert the string dates to a date format code.
+date.vec <- strptime( crime.data$OCCURRED.ON, format="%m/%d/%Y %H:%M" )
+head( date.vec )
+tail( date.vec )
+
+# Now, let's use the format() function to create several objects based on the date and time.
+crime.data$year   <- format( date.vec, format="%Y" )
+crime.data$month  <- format( date.vec, format="%B" )
+crime.data$day365 <- format( date.vec, format="%j" )
+crime.data$week   <- format( date.vec, format="%V" )
+
+# Clean up the variable classifying the cases.
+crime.data <- 
+  crime.data %>% 
+  mutate( crime.type = case_when( 
+    UCR.CRIME.CATEGORY == "AGGRAVATED ASSAULT" ~ "Assault",
+    UCR.CRIME.CATEGORY == "ARSON" ~ "Arson",
+    UCR.CRIME.CATEGORY == "BURGLARY" ~ "Burglary",
+    UCR.CRIME.CATEGORY == "DRUG OFFENSE" ~ "Drugs",
+    UCR.CRIME.CATEGORY == "LARCENY-THEFT" ~ "Theft",
+    UCR.CRIME.CATEGORY == "MURDER AND NON-NEGLIGENT MANSLAUGHTER" ~ "Homicide",
+    UCR.CRIME.CATEGORY == "MOTOR VEHICLE THEFT" ~ "MV Theft",
+    UCR.CRIME.CATEGORY == "RAPE" ~ "Rape",
+    UCR.CRIME.CATEGORY == "ROBBERY" ~ "Robbery" ) )
+
+# Drop cases for the most recent month since the low counts will through off the scale.
+crime.data <- crime.data[ ! ( 
+  crime.data$month == format( Sys.Date(), format="%B" ) &
+    crime.data$year == format( Sys.Date(), format="%Y" ) 
+) , ]
+
+```
+
+#### Plotting the data (**code**)
+
+<br>
+
+```{r, echo = TRUE, eval = FALSE}
+
+# Now, let's use dplyr and tidyr to get the data in a format where we can look at the time series.
+library( dplyr )
+library( tidyr )
+
+# Use dplyr() to create an object that is the daily count of homicides.
+homicide.data <-
+  crime.data %>% 
+  filter( crime.type == "Homicide"  )
+
+# Create the object of homicides by day.
+homicides.by.day <- 
+  homicide.data %>% 
+  select( year, month, day365 ) %>%   
+  filter( !is.na( day365 ) ) %>% 
+  group_by( year, month, day365 ) %>% 
+  summarize( counts = n() ) %>% 
+  ungroup() %>% 
+  mutate( day.time = seq( 1, length( counts ) ) ) %>% 
+  select( counts, day.time ) %>% 
+  mutate( days = 
+            seq( 
+              as.Date( head( strptime( homicide.data$OCCURRED.ON, format="%m/%d/%Y %H:%M" ) ) )[1], 
+              as.Date( tail( strptime( homicide.data$OCCURRED.ON, format="%m/%d/%Y %H:%M" ) ) )[6], 
+              length.out = length( counts ) ) ) %>% 
+  arrange( day.time )
+
+# Finally, let's take a look using ggplot2.
+library( ggplot2 )
+
+# Add the dates for the plot.
+homicides.by.day <- as.data.frame( homicides.by.day )
+
+# Now let's plot it!
+homicides.by.day %>% 
+  ggplot( aes( days, counts ) ) +
+  geom_line( color = "grey80" ) +
+  geom_point( alpha = 1/5, color = "black" ) +
+  labs( x = "", y = "Counts of Homicide per Day" ) + 
+  ggtitle( "Daily Homicides in Phoenix, AZ" ) +
+  geom_smooth( color = "darkblue", span = 0.2 ) +
+  scale_y_continuous(label = comma) +
+  theme_minimal() 
+
+```
+
+<br>
+<br>
+
+
+### What about **Homicide** by year and month? {.tabset}
+
+<br>
+
+#### Seasonality
+
+<br>
+
+The daily count view is useful, but it might help if we make two changes:  
+
+   +  First, we should break it down by year and month. This adjustment corrects for the seasonality of crime. One way to show this seasonal variation in homicide is to plot the monthly incidents for each year. Note that for `r format(Sys.time(), '%Y')`, the line stops the month before `r format(Sys.time(), '%B')`, as that is the last month of complete data from the portal.  
+
+   +  Second, we should adjust the counts to be *rates* of incidents of crime. This will adjust for differences in the population of Phoenix from 2016-`r format(Sys.time(), '%Y')`. The homicide rate is calculated as the count of homicides divided by the population size, then multiplied by 100,000. This then tells us how many homicides occur per 100,000 people in the population.  
+   
+<br>
+
+```{r, echo=FALSE, eval=TRUE}
+
+monthly.homicides.by.year %>% 
+  ggseasonplot(
+    year.labels=FALSE,
+    main = "Plot of Monthly Homicide Rate by Years for Phoenix",
+    col = rainbow( dim( homicide.rates )[2] ) ) + 
+  scale_y_continuous( label = comma ) +
+  geom_line( size = 1.2 ) +
+  theme_gray() 
+
+```
+
+<br>
+
+The plot showing the monthly rates by year helps us visualize the data better. There are a few important patterns we can take from the plot:  
+
+  + First, the trend for 2020 is *unusual* relative to other years. *Particularly* for the period of March-October. For a more elaborate discussion of this trend, see this [analysis](https://jacobtnyoung.github.io/R2PhX/projects/PHXcrime_types_2020.html).  
+  
+  + Second, relative to past years, homicides in 2022 appear to be more similar to pre-2020 trends. For example, comparing `r format(Sys.time(), '%Y')` to 2019 shows a similar pattern of homicide incidents.  
+
+<br>
+  
+As a final point, we can restructure the visualization to show the monthly counts disaggregated by year. These are counts, not rates (as the plot above), but they reflect the same data as shown in the plot. The visualization is different in that the years are not superimposed. Also, note that the y-axis shifts magnitude across the years.  
+
+The plot shows the 2-month moving average to help illustrate the trends. This plot reinforces what we see in the plot above. Mainly, that there is an apparent upward swing in homicide. This can also be seen if you look at the values on the y-axis, the maximum value tends to increase over the more recent years beginning in 2020.
+
+  
+<br>
+
+```{r, echo=FALSE, eval=TRUE}
+
+  homicide.by.month2 %>% 
+  ggplot( aes( month, counts, group = 1 ) ) +
+  geom_point( ) +
+  geom_line( ) +
+  geom_ma( ma_fun = SMA, n = 2 ) +
+  facet_grid( rows = vars( year ), scales="free" ) +
+  theme( #axis.text.x=element_blank(), 
+    #strip.text.x = element_text( size = 15 ),
+    strip.text.y = element_text( size = 8 ) ) +
+  xlab( "Month" )
+
+```
+
+<br>
+
+
+#### Reworking the data to monthly incidents (**code**) 
+
+<br>
+
+This takes some reworking of the data.  
+
+  + First, rather than collapsing by day, we want to record counts by month.  
+  
+  + Second, to create the rates, we need to adjust by the population for each year.  
+  + Third, we need to create a `ts()` object. That is, we need to create a time series object using the `ts()` function. We will also use the `ggseasonplot()` from the `forecast` package.
+
+<br>
+
+```{r, echo = TRUE, eval = FALSE}
+
+# Back to dplyr! Let's create an object that is monthly counts and sorted by year. 
+homicides.by.month <- 
+  homicide.data %>% 
+  select( year, month ) %>%   
+  filter( year != 2015 ) %>%  
+  filter( !is.na( year ) ) %>% 
+  group_by( year, month ) %>% 
+  summarize( counts = n() ) %>% 
+  spread( year, counts ) %>% 
+  arrange( match( month, month.name ) ) %>% 
+  select( !month )
+
+```
+
+#### Creating rates (**code**)
+
+Let's pull population data from the [Census Bureau](https://www.census.gov/topics/population.html). Specifically, the data for [Arizona](https://www2.census.gov/programs-surveys/popest/tables/2010-2019/cities/totals/SUB-IP-EST2019-ANNRES-04.xlsx). This is an Excel file with estimates of population for incorporated places. Since this is an .xlxs file, we will use the `openxlxs` package.
+
+Let's pull it in and get the data for Phoenix.
+
+```{r, echo = TRUE, eval = TRUE}
+library( openxlsx )
+
+# get the data.
+pop.data <- read.xlsx(
+  "https://www2.census.gov/programs-surveys/popest/tables/2010-2019/cities/totals/SUB-IP-EST2019-ANNRES-04.xlsx",
+  colNames = TRUE,
+  startRow = 4
+)
+
+# Find the row with the data for Phoenix.
+grep("Phoenix", pop.data[,1])
+
+# It is the 55th row in the object. So, we need to pull that row.
+phoenix.pop <-  pop.data[55,]
+phoenix.pop
+
+# Now, we only need the data for 2016-2019.
+phoenix.pop <- phoenix.pop[-c(1:9)]
+phoenix.pop
+
+```
+
+Ok! We have our population data. But, what about years after 2019? These are not reported yet. So, we need to fill that in. We could do this various ways, but for ease, let's just add the difference in growth from 2018 to 2019. 
+
+```{r, echo = TRUE, eval = TRUE}
+
+# Just add the difference for each year until you get the actual demographic data.
+phoenix.pop.2020 <- phoenix.pop[4] + phoenix.pop[4] - phoenix.pop[3]
+phoenix.pop.2021 <- phoenix.pop.2020 + phoenix.pop[4] - phoenix.pop[3]
+phoenix.pop.2022 <- phoenix.pop.2021 + phoenix.pop[4] - phoenix.pop[3]
+phoenix.pop.data <- as.numeric( c( phoenix.pop, phoenix.pop.2020, phoenix.pop.2021, phoenix.pop.2022 ) )
+
+# now, calculate the homicide rate. Crime rate is calculated as the count of homicides divided by the population size, then multiplied by 100,000.
+
+homicide.rates <- as.data.frame( homicides.by.month )
+
+for ( i in 1: dim( homicide.rates )[2] ){
+  homicide.rates[,i] <- ( homicide.rates[,i] / phoenix.pop.data[i] ) * 100000
+}
+
+# Now, lets use the ts() function to create a time series object.
+library( forecast )
+
+monthly.homicides.by.year <- ts(
+  matrix( as.matrix( homicide.rates ), ncol = 1 ), 
+  start=c( 2016, 1 ), 
+  end=c( as.numeric( tail( names( homicide.rates ), n=1 ) ), 12 ), frequency=12
+)
+
+```
+
+
+#### Plotting the data (**code**)
+
+<br>
+
+```{r, echo = TRUE, eval = FALSE}
+
+# Let's take a look using ggseasonplot().
+library( ggplot2 )
+library( forecast )
+
+monthly.homicides.by.year %>% 
+  ggseasonplot(
+    year.labels=FALSE,
+    main = "Plot of Monthly Homicide Rate by Years for Phoenix",
+    col = rainbow( dim( homicide.rates )[2] ) ) + 
+  scale_y_continuous( label = comma ) +
+  geom_line( size = 1.2 ) +
+  theme_gray() 
+
+```
+
+###
+
+<br>
+
+<br>
+
+<p align="center">
+[Back to R 2 Phoenix page](https://jacobtnyoung.github.io/R2PhX/)
+</p>
+
+<br>
+
+***Please*** report any needed corrections to the [Issues](https://github.com/jacobtnyoung/R2PhX/issues/new) page. Thanks!
+
+<br><br>
+
+
+###### ***Last updated `r format(Sys.time(), '%d %B, %Y')`***
