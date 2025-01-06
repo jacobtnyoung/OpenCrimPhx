@@ -52,7 +52,8 @@ library( ggplot2 )  # for plotting
 library( scales )   # for formatting the text
 library( forecast ) # for working with time series data
 library( here )     # for referencing the local directory
-
+library( viridis )  # for some coloring used in the plots
+ 
 
 # define the objects
 crimeData       <- readRDS( here( "data/crimeData.rds" ) )
@@ -76,7 +77,7 @@ Let's pull the most recent data for **crime incidents** from the site.
 
 The data are reported as UCR crime classifications and have geographic information (block address, zip) as well as the date and time of the incident. As of `r format( Sys.time(), '%B, %Y' )`, there were `r comma( dim( crimeData )[1] )` crime incidents with complete data from 11/2015 to within a week of the current date.   
 
-Let's start by looking at the daily counts of crime from when the data are first available (i.e. November 2015) and look at the trend up to the current date. 
+Let's start by looking at the daily counts of crime from when the data are first available (i.e. November 2015) and look at the trend up to the current date. In the analyses below, we will drop the most recent month as the data are not complete for that month.
 
 <br>
 
@@ -120,15 +121,18 @@ monthlyCrimeRateByYear <- ts(
 )
 
 # render the plot
-monthlyCrimeRateByYear %>% 
+monthlyCrimeRateByYear %>%
   ggseasonplot(
     year.labels = TRUE,
     continuous = FALSE,
-    main = "Plot of Monthly Crime Rate by Years for Phoenix, AZ",
-    col = colorRampPalette(c("#f7968f", "#c41104"))( dim( crimeRatesMonth )[2] ) ) + 
-  scale_y_continuous( label = comma ) +
-  geom_line( size = 1.2 ) +
-  theme_minimal() 
+    col = viridis( n = dim(crimeRatesMonth)[2], option = "cividis" ) ) +
+  scale_y_continuous( labels = comma ) +
+  geom_line( size = 1.5, alpha = 0.7 ) +
+  geom_point( size = 2, shape = 21, fill = "white", color = "black" ) + 
+  ggtitle(
+    "Monthly Crime Rate Trends in Phoenix, AZ", 
+    subtitle = "Observed seasonal patterns across years" ) +
+  theme_minimal()
 
 ```
 
@@ -147,15 +151,15 @@ The plot showing the monthly rates by year helps us visualize the data better. N
 crimeRatesYear %>%
   # drop the current year because it distorts the graph
   filter( year != as.numeric( format( Sys.Date(), format="%Y" ) ) ) %>%
-    ggplot( aes( year, rates, group = 1 ) ) +
-    geom_line( color = "grey20", size = 1.2 ) +
-    geom_point( color = "firebrick", size = 4 ) +
-    labs( x = "", y = "Rate of Crime per Year" ) + 
-    ggtitle( "Plot of Crime Rate by Year in Phoenix, AZ" ) +
-    scale_y_continuous( label = comma ) +
-    theme_minimal() 
+  ggplot( aes( year, rates, group = 1 ) ) +
+  geom_line( color = "grey40", size = 1.2 ) +
+  geom_point( color = "firebrick", size = 4 ) +
+  labs( x = "", y = "Rate of Crime per Year" ) + 
+  ggtitle( "Plot of Crime Rate by Year in Phoenix, AZ" , 
+           subtitle = "Observed yearly rates across years" ) +
+  scale_y_continuous( label = comma ) +
+  theme_minimal() 
  
-
 ```
 
 <br>

@@ -13,7 +13,7 @@
 
 <title>Pre-Processing Crime Data for Phoenix</title>
 
-<script src="site_libs/header-attrs-2.25/header-attrs.js"></script>
+<script src="site_libs/header-attrs-2.23/header-attrs.js"></script>
 <script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="site_libs/bootstrap-3.3.5/css/simplex.min.css" rel="stylesheet" />
@@ -267,7 +267,7 @@ $(document).ready(function () {
 
 
 <h1 class="title toc-ignore">Pre-Processing Crime Data for Phoenix</h1>
-<h4 class="date">19 December, 2024</h4>
+<h4 class="date">06 January, 2025</h4>
 
 </div>
 
@@ -280,9 +280,10 @@ contains incidents reported to the Phoenix Police Department. The city
 updates the <a
 href="%22https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crime-data_crime-data_crimestat.csv%22">file</a>
 at 11am every day and it contains data beginning November 2015 up to 7
-days before the posting date. Before we do anything with it, we need to
-do some pre-processing. Mainly, cleaning up variables, creating basic
-objects, and incorporating population data to calculate rates.</p>
+days before the posting date.</p>
+<p>Before we do anything with it, we need to do some pre-processing.
+Mainly, cleaning up variables, creating basic objects, and incorporating
+population data to calculate rates.</p>
 <p><br><br></p>
 <div id="setup-and-loading-the-data" class="section level2">
 <h2>Setup and Loading the Data</h2>
@@ -313,7 +314,11 @@ href="%22https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab
 <p><br></p>
 <pre class="r"><code># get the data
 url &lt;- &quot;https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crime-data_crime-data_crimestat.csv&quot;
+
+# assign the data to an object
 crimeData &lt;- read.csv( url, as.is = TRUE, header = TRUE )
+
+# remove cases that are missing data
 crimeData &lt;- na.omit( crimeData )
 
 # remove duplicate ids
@@ -350,12 +355,12 @@ crimeData &lt;-
   crimeData %&gt;% 
   filter( year != 2015 )
 
-# drop cases for the most recent month
+# drop cases for the most recent month (since the data for the current month are incomplete)
 crimeData &lt;- crimeData[ ! ( 
   crimeData$month == format( Sys.Date(), format=&quot;%B&quot; ) &amp;
     crimeData$year == format( Sys.Date(), format=&quot;%Y&quot; ) 
 ) , ]</code></pre>
-<p><br></p>
+<p><br><br></p>
 </div>
 </div>
 <div id="adjusting-for-population" class="section level2">
@@ -369,29 +374,38 @@ href="https://www.census.gov/topics/population.html">Census Bureau</a>.
 The command below uses the Census Bureau API to pull the data. To see
 more about how the API is used, see the <a
 href="/Users/jyoung20/ASU%20Dropbox/Jacob%20Young/GitHub_repos/OpenCrimPhx/utils/phoenix-population.R">phoenix-population.R</a>
-file.</p>
+file. As you will see if you look through the <a
+href="/Users/jyoung20/ASU%20Dropbox/Jacob%20Young/GitHub_repos/OpenCrimPhx/utils/phoenix-population.R">phoenix-population.R</a>
+file, population data are available for the years 2016-2022 and
+interpolated for the years 2023-2025.</p>
 <p><br></p>
 <pre class="r"><code>import::here( &quot;phoenixPopDat&quot;,
               .from = here::here( &quot;utils/phoenix-population.R&quot; ),
               .character_only = TRUE )</code></pre>
 <p><br></p>
 <p>We now have an object, <code>phoenixPopDat</code> that is the yearly
-population for Phoenix. Note that the population for 2022-2024 is just
-an estimate, not that reported to the Census Bureau.</p>
-<p><br></p>
+population for Phoenix. As noted above, the population for 2023-2025 are
+just an estimate, as these are not yet available through the Census
+Bureau’s API. Also, the data for 2020 are interpolated as well due to
+low response rates. The Census Bureau did released a set of experimental
+estimates for the 2020 1-year ACS, but for ease of analysis here we will
+just interpolate the data.</p>
+<p><br><br></p>
 </div>
 <div id="appending-the-geo-data" class="section level2">
 <h2>Appending the Geo Data</h2>
 <p>We can append the geographic data for the data. This piece calls the
-<a href="">crimeDatGeo2016-2024.rds</a> file that is created using the
-<a href="">crime-geo.R</a> script. It uses the Census API to pull
-coordinate data.</p>
+<a
+href="https://github.com/jacobtnyoung/OpenCrimPhx/blob/main/data/data-geo/crimeDatGeo2016-2024.rds">crimeDatGeo2016-2024.rds</a>
+file that is created using the <a
+href="/Users/jyoung20/ASU%20Dropbox/Jacob%20Young/GitHub_repos/OpenCrimPhx/utils/crime-geo.R">crime-geo.R</a>
+script. It uses the Census API to pull coordinate data.</p>
 <pre class="r"><code># get the file
 crimeDatGeo &lt;- readRDS( here( &quot;data/data-geo/crimeDatGeo2016-2024.rds&quot; ) )
 
 # merge the geographic data with the cases
 crimeData &lt;- left_join( crimeData, crimeDatGeo, by = &quot;INC.NUMBER&quot; )</code></pre>
-<p><br></p>
+<p><br><br></p>
 </div>
 <div id="creating-objects" class="section level2">
 <h2>Creating Objects</h2>
@@ -510,7 +524,7 @@ crimeRatesYearType &lt;- crimeRatesYearType %&gt;%
 # create the rates
 crimeRatesYearType &lt;- crimeRatesYearType %&gt;% 
   mutate( rates = ( ( counts / population ) * 100000 ) )</code></pre>
-<p><br></p>
+<p><br><br></p>
 </div>
 </div>
 <div id="saving-the-file" class="section level2">
@@ -537,7 +551,7 @@ href="https://jacobtnyoung.github.io/OpenCrimPhx/data">data</a> folder
 for the repository, you will see that these files have been added. When
 I run this script, I have to push these files to the repository. But, we
 can now reference them using the <code>readRDS()</code> function.</p>
-<p><br></p>
+<p><br><br></p>
 </div>
 <div id="next-steps" class="section level2">
 <h2>Next steps…</h2>
@@ -559,8 +573,8 @@ Criminology Phoenix page</a>
 href="https://github.com/jacobtnyoung/OpenCrimPhx/issues/new">Issues</a>
 page. Thanks!</p>
 <p><br><br></p>
-<div id="last-updated-19-december-2024" class="section level6">
-<h6><strong><em>Last updated 19 December, 2024</em></strong></h6>
+<div id="last-updated-06-january-2025" class="section level6">
+<h6><strong><em>Last updated 06 January, 2025</em></strong></h6>
 </div>
 </div>
 </div>

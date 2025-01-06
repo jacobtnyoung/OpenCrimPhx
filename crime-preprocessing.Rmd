@@ -18,7 +18,9 @@ knitr::opts_chunk$set( echo = TRUE,
 
 <br>
 
-The [Crime Data](https://www.phoenixopendata.com/dataset/crime-data) file from the [data portal](https://www.phoenixopendata.com/) contains incidents reported to the Phoenix Police Department. The city updates the [file]("https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crime-data_crime-data_crimestat.csv") at 11am every day and it contains data beginning November 2015 up to 7 days before the posting date. Before we do anything with it, we need to do some pre-processing. Mainly, cleaning up variables, creating basic objects, and incorporating population data to calculate rates.
+The [Crime Data](https://www.phoenixopendata.com/dataset/crime-data) file from the [data portal](https://www.phoenixopendata.com/) contains incidents reported to the Phoenix Police Department. The city updates the [file]("https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crime-data_crime-data_crimestat.csv") at 11am every day and it contains data beginning November 2015 up to 7 days before the posting date. 
+
+Before we do anything with it, we need to do some pre-processing. Mainly, cleaning up variables, creating basic objects, and incorporating population data to calculate rates.
 
 <br><br>
 
@@ -61,7 +63,11 @@ Next we want to load the data and do some cleaning. The data can be called direc
 
 # get the data
 url <- "https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crime-data_crime-data_crimestat.csv"
+
+# assign the data to an object
 crimeData <- read.csv( url, as.is = TRUE, header = TRUE )
+
+# remove cases that are missing data
 crimeData <- na.omit( crimeData )
 
 # remove duplicate ids
@@ -98,22 +104,21 @@ crimeData <-
   crimeData %>% 
   filter( year != 2015 )
 
-# drop cases for the most recent month
+# drop cases for the most recent month (since the data for the current month are incomplete)
 crimeData <- crimeData[ ! ( 
   crimeData$month == format( Sys.Date(), format="%B" ) &
     crimeData$year == format( Sys.Date(), format="%Y" ) 
 ) , ]
 
-
 ```
 
-<br>
+<br><br>
 
 ## Adjusting for Population
 
 Right now, the `crimeData` object is a list of incidents. When we go to aggregate over months or years, we are going to want to adjust based on population differences. In other words, we will want to calculate the rates (not just examine raw counts).
 
-The rates are computed using population data from the [Census Bureau](https://www.census.gov/topics/population.html). The command below uses the Census Bureau API to pull the data. To see more about how the API is used, see the [phoenix-population.R](/Users/jyoung20/ASU Dropbox/Jacob Young/GitHub_repos/OpenCrimPhx/utils/phoenix-population.R) file.
+The rates are computed using population data from the [Census Bureau](https://www.census.gov/topics/population.html). The command below uses the Census Bureau API to pull the data. To see more about how the API is used, see the [phoenix-population.R](/Users/jyoung20/ASU Dropbox/Jacob Young/GitHub_repos/OpenCrimPhx/utils/phoenix-population.R) file. As you will see if you look through the [phoenix-population.R](/Users/jyoung20/ASU Dropbox/Jacob Young/GitHub_repos/OpenCrimPhx/utils/phoenix-population.R) file, population data are available for the years 2016-2022 and interpolated for the years 2023-`r format( Sys.Date(), "%Y" )`.
 
 <br>
 
@@ -127,13 +132,13 @@ import::here( "phoenixPopDat",
 
 <br>
 
-We now have an object, `phoenixPopDat` that is the yearly population for Phoenix. Note that the population for 2022-2024 is just an estimate, not that reported to the Census Bureau.
+We now have an object, `phoenixPopDat` that is the yearly population for Phoenix. As noted above, the population for 2023-`r format( Sys.Date(), "%Y" )` are just an estimate, as these are not yet available through the Census Bureau's API. Also, the data for 2020 are interpolated as well due to low response rates. The Census Bureau did released a set of experimental estimates for the 2020 1-year ACS, but for ease of analysis here we will just interpolate the data.
 
-<br>
+<br><br>
 
 ## Appending the Geo Data
 
-We can append the geographic data for the data. This piece calls the [crimeDatGeo2016-2024.rds]() file that is created using the [crime-geo.R]() script. It uses the Census API to pull coordinate data.
+We can append the geographic data for the data. This piece calls the [crimeDatGeo2016-2024.rds](https://github.com/jacobtnyoung/OpenCrimPhx/blob/main/data/data-geo/crimeDatGeo2016-2024.rds) file that is created using the [crime-geo.R](/Users/jyoung20/ASU Dropbox/Jacob Young/GitHub_repos/OpenCrimPhx/utils/crime-geo.R) script. It uses the Census API to pull coordinate data.
 
 ```{r}
 
@@ -145,8 +150,7 @@ crimeData <- left_join( crimeData, crimeDatGeo, by = "INC.NUMBER" )
 
 ```
 
-<br>
-
+<br><br>
 
 ## Creating Objects
 
@@ -280,7 +284,7 @@ crimeRatesYearType <- crimeRatesYearType %>%
 
 ```
 
-<br>
+<br><br>
 
 ## Saving the File
 
@@ -310,7 +314,7 @@ saveRDS( crimeRatesYearType , file = here( "data/crimeRatesMonthYear.rds" ) )
 
 If you look in the [data](https://jacobtnyoung.github.io/OpenCrimPhx/data) folder for the repository, you will see that these files have been added. When I run this script, I have to push these files to the repository. But, we can now reference them using the `readRDS()` function.
 
-<br>
+<br><br>
 
 ## Next steps...  
 

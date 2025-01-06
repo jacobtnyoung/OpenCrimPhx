@@ -13,7 +13,7 @@
 
 <title>What is going on with crime in Phoenix?</title>
 
-<script src="site_libs/header-attrs-2.25/header-attrs.js"></script>
+<script src="site_libs/header-attrs-2.23/header-attrs.js"></script>
 <script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="site_libs/bootstrap-3.3.5/css/simplex.min.css" rel="stylesheet" />
@@ -280,7 +280,7 @@ $(document).ready(function () {
 
 <h1 class="title toc-ignore">What is going on with crime in
 Phoenix?</h1>
-<h4 class="date">19 December, 2024</h4>
+<h4 class="date">06 January, 2025</h4>
 
 </div>
 
@@ -326,7 +326,8 @@ library( ggplot2 )  # for plotting
 library( scales )   # for formatting the text
 library( forecast ) # for working with time series data
 library( here )     # for referencing the local directory
-
+library( viridis )  # for some coloring used in the plots
+ 
 
 # define the objects
 crimeData       &lt;- readRDS( here( &quot;data/crimeData.rds&quot; ) )
@@ -346,12 +347,13 @@ class="section level3">
 from the site.</p>
 <p>The data are reported as UCR crime classifications and have
 geographic information (block address, zip) as well as the date and time
-of the incident. As of December, 2024, there were 559,130 crime
-incidents with complete data from 11/2015 to within a week of the
-current date.</p>
+of the incident. As of January, 2025, there were 563,069 crime incidents
+with complete data from 11/2015 to within a week of the current
+date.</p>
 <p>Let’s start by looking at the daily counts of crime from when the
 data are first available (i.e. November 2015) and look at the trend up
-to the current date.</p>
+to the current date. In the analyses below, we will drop the most recent
+month as the data are not complete for that month.</p>
 <p><br></p>
 <pre class="r"><code>crimesByDay %&gt;% 
   ggplot( aes( days, counts ) ) +
@@ -374,11 +376,11 @@ changes:</p>
 <li><p>First, we should break it down by year and month. This adjustment
 corrects for the seasonality of crime. One way to show this seasonal
 variation in crime incidents is to plot the monthly incidents for each
-year. Note that for 2024, the line stops the month before December, as
+year. Note that for 2025, the line stops the month before January, as
 that is the last month of complete data from the portal.</p></li>
 <li><p>Second, we should adjust the counts to be <em>rates</em> of
 incidents of crime. This will adjust for differences in the population
-of Phoenix from 2016-2024. The crime incident rate is calculated as the
+of Phoenix from 2016-2025. The crime incident rate is calculated as the
 count of crimes divided by the population size, then multiplied by
 100,000. This then tells us how many incidents of crime occur per
 100,000 people in the population. The <a
@@ -398,19 +400,22 @@ monthlyCrimeRateByYear &lt;- ts(
 )
 
 # render the plot
-monthlyCrimeRateByYear %&gt;% 
+monthlyCrimeRateByYear %&gt;%
   ggseasonplot(
     year.labels = TRUE,
     continuous = FALSE,
-    main = &quot;Plot of Monthly Crime Rate by Years for Phoenix, AZ&quot;,
-    col = colorRampPalette(c(&quot;#f7968f&quot;, &quot;#c41104&quot;))( dim( crimeRatesMonth )[2] ) ) + 
-  scale_y_continuous( label = comma ) +
-  geom_line( size = 1.2 ) +
-  theme_minimal() </code></pre>
+    col = viridis( n = dim(crimeRatesMonth)[2], option = &quot;cividis&quot; ) ) +
+  scale_y_continuous( labels = comma ) +
+  geom_line( size = 1.5, alpha = 0.7 ) +
+  geom_point( size = 2, shape = 21, fill = &quot;white&quot;, color = &quot;black&quot; ) + 
+  ggtitle(
+    &quot;Monthly Crime Rate Trends in Phoenix, AZ&quot;, 
+    subtitle = &quot;Observed seasonal patterns across years&quot; ) +
+  theme_minimal()</code></pre>
 <p><img src="crime-trends_files/figure-html/unnamed-chunk-3-1.png" width="1152" /></p>
 <p><br></p>
 <p>The plot showing the monthly rates by year helps us visualize the
-data better. Note that the current year, 2024, is missing a label
+data better. Note that the current year, 2025, is missing a label
 because the year is incomplete.</p>
 <p><br></p>
 </div>
@@ -421,13 +426,14 @@ class="section level4">
 <pre class="r"><code>crimeRatesYear %&gt;%
   # drop the current year because it distorts the graph
   filter( year != as.numeric( format( Sys.Date(), format=&quot;%Y&quot; ) ) ) %&gt;%
-    ggplot( aes( year, rates, group = 1 ) ) +
-    geom_line( color = &quot;grey20&quot;, size = 1.2 ) +
-    geom_point( color = &quot;firebrick&quot;, size = 4 ) +
-    labs( x = &quot;&quot;, y = &quot;Rate of Crime per Year&quot; ) + 
-    ggtitle( &quot;Plot of Crime Rate by Year in Phoenix, AZ&quot; ) +
-    scale_y_continuous( label = comma ) +
-    theme_minimal() </code></pre>
+  ggplot( aes( year, rates, group = 1 ) ) +
+  geom_line( color = &quot;grey40&quot;, size = 1.2 ) +
+  geom_point( color = &quot;firebrick&quot;, size = 4 ) +
+  labs( x = &quot;&quot;, y = &quot;Rate of Crime per Year&quot; ) + 
+  ggtitle( &quot;Plot of Crime Rate by Year in Phoenix, AZ&quot; , 
+           subtitle = &quot;Observed yearly rates across years&quot; ) +
+  scale_y_continuous( label = comma ) +
+  theme_minimal() </code></pre>
 <p><img src="crime-trends_files/figure-html/unnamed-chunk-4-1.png" width="1152" /></p>
 <p><br></p>
 </div>
@@ -504,8 +510,8 @@ Criminology Phoenix page</a>
 href="https://github.com/jacobtnyoung/OpenCrimPhx/issues/new">Issues</a>
 page. Thanks!</p>
 <p><br><br></p>
-<div id="last-updated-19-december-2024" class="section level6">
-<h6><strong><em>Last updated 19 December, 2024</em></strong></h6>
+<div id="last-updated-06-january-2025" class="section level6">
+<h6><strong><em>Last updated 06 January, 2025</em></strong></h6>
 </div>
 </div>
 </div>

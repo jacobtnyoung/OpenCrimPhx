@@ -46,6 +46,7 @@ library( cowplot )  # for putting the plots together
 library( scales )   # for formatting the text
 library( forecast ) # for working with time series data
 library( here )     # for referencing the local directory
+library( viridis )  # colors for plots below
 
 
 # define the objects
@@ -61,6 +62,8 @@ crimeRatesMonthType  <- readRDS( here( "data/crimeRatesMonthType.rds" ) )
 ```
 
 <br>
+
+## Loading the Unemployment Data
 
 First, load the unemployment data. This makes a call to the [Bureau of Labor Statistics](https://www.bls.gov/) API.
 
@@ -86,6 +89,12 @@ UnemployByMonth <-
   ungroup() %>% 
   select( !month )
 
+```
+
+Now that the object is constructed, we can plot it.
+
+```{r}
+
 # create a time series object for plotting
 monthlyUnemploymentRateByYear <- ts(
   matrix( as.matrix( UnemployByMonth ), ncol = 1 ), 
@@ -94,15 +103,19 @@ monthlyUnemploymentRateByYear <- ts(
 )
 
 # plot the rates
-monthlyUnemploymentRateByYear %>% 
-  ggseasonplot( 
+monthlyUnemploymentRateByYear %>%
+  ggseasonplot(
     year.labels = TRUE,
     continuous = FALSE,
-    main = "Plot of Monthly Unemployment Rate by Years for Phoenix, AZ",
-    col = colorRampPalette(c("#f7968f", "#c41104"))( dim( UnemployByMonth )[2] ) ) + 
-  scale_y_continuous( label = comma ) +
-  geom_line( size = 1.2 ) +
-  theme_minimal() 
+    col = viridis( n = dim( UnemployByMonth )[2], option = "cividis" ) ) +
+  scale_y_continuous( labels = comma ) +
+  geom_line( size = 1.5, alpha = 0.7 ) +
+  geom_point( size = 2, shape = 21, fill = "white", color = "black" ) + 
+  ggtitle(
+    "Monthly Unemployment Rate by Years", 
+    subtitle = "Phoenix, AZ" ) +
+  theme_minimal()
+
 
 ```
 
@@ -118,25 +131,31 @@ monthlyCrimeRateByYear <- ts(
 )
 
 # render the plot
-crime_seasonplot <- monthlyCrimeRateByYear %>% 
-  ggseasonplot( 
+crime_seasonplot <- monthlyCrimeRateByYear %>%
+  ggseasonplot(
     year.labels = TRUE,
     continuous = FALSE,
-    main = "Plot of Monthly Crime Rate by Years for Phoenix, AZ",
-    col = colorRampPalette(c("#f7968f", "#c41104"))( dim( crimeRatesMonth )[2] ) ) + 
-  scale_y_continuous( label = comma ) +
-  geom_line( size = 1.2 ) +
-  theme_minimal() 
+    col = viridis( n = dim( crimeRatesMonth )[2], option = "viridis" ) ) +
+  scale_y_continuous( labels = comma ) +
+  geom_line( size = 1.5, alpha = 0.7 ) +
+  geom_point( size = 2, shape = 21, fill = "white", color = "black" ) + 
+  ggtitle(
+    "Monthly Crime Rate by Years", 
+    subtitle = "Phoenix, AZ" ) +
+  theme_minimal()
 
-unemployment_seasonplot <- monthlyUnemploymentRateByYear %>% 
-  ggseasonplot( 
+unemployment_seasonplot <- monthlyUnemploymentRateByYear %>%
+  ggseasonplot(
     year.labels = TRUE,
     continuous = FALSE,
-    main = "Plot of Monthly Unemployment Rate by Years for Phoenix, AZ",
-    col = colorRampPalette(c("#f7968f", "#c41104"))( dim( UnemployByMonth )[2] ) ) + 
-  scale_y_continuous( label = comma ) +
-  geom_line( size = 1.2 ) +
-  theme_minimal() 
+    col = viridis( n = dim( UnemployByMonth )[2], option = "cividis" ) ) +
+  scale_y_continuous( labels = comma ) +
+  geom_line( size = 1.5, alpha = 0.7 ) +
+  geom_point( size = 2, shape = 21, fill = "white", color = "black" ) + 
+  ggtitle(
+    "Monthly Unemployment Rate by Years", 
+    subtitle = "Phoenix, AZ" ) +
+  theme_minimal()
 
 combined_plot <- plot_grid( unemployment_seasonplot, crime_seasonplot, ncol = 1 )
 print( combined_plot )
@@ -157,16 +176,19 @@ actual_data <- data.frame(
     yUnemp = as.numeric( monthlyUnemploymentRateByYear )
 )
 
-crime_plot <- ggplot() +
-  geom_line( data = actual_data, aes( x = dsCrime, y = yCrime ), color = "#c41104" ) +
-  labs( x = "Year", y = "Crime Rate", color = "Crime Rate" ) +
-  theme_minimal()
-
-unemp_plot <- ggplot() +
-  geom_line( data = actual_data, aes( x = dsUnemp, y = yUnemp ), color = "#c41104" ) +
+unemp_plot <- 
+  ggplot( data = actual_data, aes( x = dsUnemp, y = yUnemp ) ) +
+  geom_line( color = "#c41104", size = 1.5, alpha = 0.7 ) +
+  scale_x_continuous( breaks = seq( min( actual_data$dsUnemp) , max( actual_data$dsUnemp ), by = 1 ) ) +
   labs( x = "Year", y = "Unemployment Rate", color = "Unemployment Rate" ) +
   theme_minimal()
 
+crime_plot <- 
+  ggplot( data = actual_data, aes( x = dsCrime, y = yCrime ) ) +
+  geom_line( color = "#c41104", size = 1.5, alpha = 0.7 ) +
+  scale_x_continuous( breaks = seq( min( actual_data$dsCrime) , max( actual_data$dsCrime ), by = 1 ) ) +
+  labs( x = "Year", y = "Crime Rate", color = "Crime Rate" ) +
+  theme_minimal()
 
 combined_plot <- plot_grid( unemp_plot, crime_plot, ncol = 1 )
 print( combined_plot )
@@ -175,17 +197,81 @@ print( combined_plot )
 
 <br>
 
-Now we can examine the correlation between the two, which is `r round( cor( actual_data$yUnemp, actual_data$yCrime, use = "complete.obs" ), 3 )`.
+Now we can examine the correlation between the two, which is **`r round( cor( actual_data$yUnemp, actual_data$yCrime, use = "complete.obs" ), 3 )`**.
 
-```{r, eval = FALSE}
+<br><br>
 
-# calculate the ccf
-unemp_crime_ccf <- ccf( actual_data$yUnemp, actual_data$yCrime )
+## Adjusting for 2020
+
+Ok, my guess is you are saying "hey! 2020 is a bit of an outlier and throwing things off!". Great point! Let's drop 2020 and re-examine the relationship.
+
+To do so, we can just exclude 2020 from the data object. But, we simply make it missing so that it does not mess up the x-axis labels on our plot.
+
+```{r}
+
+# filter the data to make 2020 NA.
+actual_data_with_gap <- actual_data %>%
+  mutate(
+    yUnemp = ifelse(as.integer(dsUnemp) == 2020, NA, yUnemp),
+    yCrime = ifelse(as.integer(dsCrime) == 2020, NA, yCrime)
+  )
+
+unemp_plot <- 
+  ggplot( data = actual_data_with_gap, aes( x = dsUnemp, y = yUnemp ) ) +
+  geom_line( color = "#c41104", size = 1.5, alpha = 0.7 ) +
+  scale_x_continuous( breaks = seq( min( actual_data$dsUnemp) , max( actual_data$dsUnemp ), by = 1 ) ) +
+  labs( x = "Year", y = "Unemployment Rate", color = "Unemployment Rate" ) +
+  theme_minimal()
+
+crime_plot <- 
+  ggplot( data = actual_data_with_gap, aes( x = dsCrime, y = yCrime ) ) +
+  geom_line( color = "#c41104", size = 1.5, alpha = 0.7 ) +
+  scale_x_continuous( breaks = seq( min( actual_data$dsCrime) , max( actual_data$dsCrime ), by = 1 ) ) +
+  labs( x = "Year", y = "Crime Rate", color = "Crime Rate" ) +
+  theme_minimal()
+
+combined_plot <- plot_grid( unemp_plot, crime_plot, ncol = 1 )
+print( combined_plot )
 
 ```
 
 <br>
 
+Now we can examine the correlation between the two, which is **`r round( cor( actual_data_with_gap$yUnemp, actual_data_with_gap$yCrime, use = "complete.obs" ), 3 )`**. That looks more appropriate. Or, it shows how sensitive the interpretation is to the inclusion of the data from 2020.
+
+<br><br>
+
+## Unemployment and Crime across Crime Types
+
+So far, we have examined the relationship between unemployment and crime over all types of crime. But, what about different types of crime? Might the relationship vary?
+
+First, we need to rework the unemployment data to merge it with the monthly crime data.
+
+```{r}
+
+# convert unemployment matrix to a data frame
+unemploy_long <- as.data.frame( as.table( as.matrix( UnemployByMonth ) ) )
+
+# rename the columns for clarity
+colnames( unemploy_long ) <- c( "month", "year", "u_rate" )
+
+# replace numeric months with abbreviated month names
+unemploy_long$month <- month.abb[unemploy_long$month]
+
+# ensure `year` is numeric
+unemploy_long$year <- as.numeric( as.character( unemploy_long$year ) )
+
+```
+
+Now, we can merge these data to the monthly crime type data.
+
+```{r, eval=FALSE}
+
+crimeRatesMonthTypeUnemp <- crimeRatesMonthType %>%
+  left_join( unemploy_long, by = c( "year", "month" ) )
+
+```
+ 
 <br>
 
 ----
