@@ -13,7 +13,7 @@
 
 <title>Crime and Unemployment</title>
 
-<script src="site_libs/header-attrs-2.23/header-attrs.js"></script>
+<script src="site_libs/header-attrs-2.25/header-attrs.js"></script>
 <script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="site_libs/bootstrap-3.3.5/css/simplex.min.css" rel="stylesheet" />
@@ -279,7 +279,7 @@ $(document).ready(function () {
 
 
 <h1 class="title toc-ignore">Crime and Unemployment</h1>
-<h4 class="date">06 January, 2025</h4>
+<h4 class="date">14 February, 2025</h4>
 
 </div>
 
@@ -378,6 +378,14 @@ monthlyCrimeRateByYear &lt;- ts(
   end=c( as.numeric( tail( names( crimeRatesMonth ), n=1 ) ), 12 ), frequency=12
 )
 
+# drop 2025 from the monthlyCrimeRateByYear object as the 
+# unemployment data are not yet available
+
+monthlyCrimeRateByYear &lt;- window( 
+  monthlyCrimeRateByYear, 
+  start = c( 2016, 1 ), 
+  end = c( 2024, 12 ) )
+
 # render the plot
 crime_seasonplot &lt;- monthlyCrimeRateByYear %&gt;%
   ggseasonplot(
@@ -437,7 +445,7 @@ print( combined_plot )</code></pre>
 <p><img src="crime-unemployment_files/figure-html/unnamed-chunk-5-1.png" width="1152" /></p>
 <p><br></p>
 <p>Now we can examine the correlation between the two, which is
-<strong>0.178</strong>.</p>
+<strong>0.19</strong>.</p>
 <p><br><br></p>
 </div>
 <div id="adjusting-for-2020" class="section level2">
@@ -474,7 +482,7 @@ print( combined_plot )</code></pre>
 <p><img src="crime-unemployment_files/figure-html/unnamed-chunk-6-1.png" width="1152" /></p>
 <p><br></p>
 <p>Now we can examine the correlation between the two, which is
-<strong>0.474</strong>. That looks more appropriate. Or, it shows how
+<strong>0.487</strong>. That looks more appropriate. Or, it shows how
 sensitive the interpretation is to the inclusion of the data from
 2020.</p>
 <p><br><br></p>
@@ -497,10 +505,28 @@ colnames( unemploy_long ) &lt;- c( &quot;month&quot;, &quot;year&quot;, &quot;u_
 unemploy_long$month &lt;- month.abb[unemploy_long$month]
 
 # ensure `year` is numeric
-unemploy_long$year &lt;- as.numeric( as.character( unemploy_long$year ) )</code></pre>
+unemploy_long$year &lt;- as.character( unemploy_long$year )
+#unemploy_long$year &lt;- as.numeric( as.character( unemploy_long$year ) )</code></pre>
 <p>Now, we can merge these data to the monthly crime type data.</p>
 <pre class="r"><code>crimeRatesMonthTypeUnemp &lt;- crimeRatesMonthType %&gt;%
   left_join( unemploy_long, by = c( &quot;year&quot;, &quot;month&quot; ) )</code></pre>
+<p>Now we can plot it.</p>
+<pre class="r"><code>crimeRatesMonthTypeUnemp %&gt;% 
+  ggplot( aes( month, rates, group = 1 ) ) +
+  geom_line( color = &quot;grey40&quot; ) +
+  geom_point( alpha = 2/5, color = &quot;#751913&quot; ) +
+  geom_line( aes( y = u_rate ), color = &quot;#105a82&quot; ) +
+  geom_point( aes( y = u_rate ), alpha = 2/5, color = &quot;#105a82&quot; ) +
+  facet_grid( crime.type ~ year, scales=&quot;free&quot; ) +
+  theme( axis.text.x=element_blank(), 
+         strip.text.x = element_text( size = 15 ),
+         strip.text.y = element_text( size = 12 ) ) +
+  xlab( &quot;Month&quot; )</code></pre>
+<p><img src="crime-unemployment_files/figure-html/unnamed-chunk-9-1.png" width="1152" /></p>
+<p>Note that this looks a bit wonky. That is because the unemployment
+rate is being plotted based on the same rate scale as crime. So, when
+those rates are really different, they will not plot well (without
+adjustment).</p>
 <p><br></p>
 <hr />
 <p align="center">
@@ -513,8 +539,8 @@ Criminology Phoenix page</a>
 href="https://github.com/jacobtnyoung/OpenCrimPhx/issues/new">Issues</a>
 page. Thanks!</p>
 <p><br><br></p>
-<div id="last-updated-06-january-2025" class="section level6">
-<h6><strong><em>Last updated 06 January, 2025</em></strong></h6>
+<div id="last-updated-14-february-2025" class="section level6">
+<h6><strong><em>Last updated 14 February, 2025</em></strong></h6>
 </div>
 </div>
 

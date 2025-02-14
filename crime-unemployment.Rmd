@@ -130,6 +130,14 @@ monthlyCrimeRateByYear <- ts(
   end=c( as.numeric( tail( names( crimeRatesMonth ), n=1 ) ), 12 ), frequency=12
 )
 
+# drop 2025 from the monthlyCrimeRateByYear object as the 
+# unemployment data are not yet available
+
+monthlyCrimeRateByYear <- window( 
+  monthlyCrimeRateByYear, 
+  start = c( 2016, 1 ), 
+  end = c( 2024, 12 ) )
+
 # render the plot
 crime_seasonplot <- monthlyCrimeRateByYear %>%
   ggseasonplot(
@@ -259,18 +267,41 @@ colnames( unemploy_long ) <- c( "month", "year", "u_rate" )
 unemploy_long$month <- month.abb[unemploy_long$month]
 
 # ensure `year` is numeric
-unemploy_long$year <- as.numeric( as.character( unemploy_long$year ) )
+unemploy_long$year <- as.character( unemploy_long$year )
+#unemploy_long$year <- as.numeric( as.character( unemploy_long$year ) )
 
 ```
 
 Now, we can merge these data to the monthly crime type data.
 
-```{r, eval=FALSE}
+```{r, eval=TRUE}
 
 crimeRatesMonthTypeUnemp <- crimeRatesMonthType %>%
   left_join( unemploy_long, by = c( "year", "month" ) )
 
 ```
+
+Now we can plot it.
+
+```{r}
+
+crimeRatesMonthTypeUnemp %>% 
+  ggplot( aes( month, rates, group = 1 ) ) +
+  geom_line( color = "grey40" ) +
+  geom_point( alpha = 2/5, color = "#751913" ) +
+  geom_line( aes( y = u_rate ), color = "#105a82" ) +
+  geom_point( aes( y = u_rate ), alpha = 2/5, color = "#105a82" ) +
+  facet_grid( crime.type ~ year, scales="free" ) +
+  theme( axis.text.x=element_blank(), 
+         strip.text.x = element_text( size = 15 ),
+         strip.text.y = element_text( size = 12 ) ) +
+  xlab( "Month" )
+
+```
+
+Note that this looks a bit wonky. That is because the unemployment rate is being plotted based on the same rate scale as crime. So, when those rates are really different, they will not plot well (without adjustment).
+
+
  
 <br>
 
