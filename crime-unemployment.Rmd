@@ -133,10 +133,10 @@ monthlyCrimeRateByYear <- ts(
 # drop 2025 from the monthlyCrimeRateByYear object as the 
 # unemployment data are not yet available
 
-monthlyCrimeRateByYear <- window( 
-  monthlyCrimeRateByYear, 
-  start = c( 2016, 1 ), 
-  end = c( 2024, 12 ) )
+#monthlyCrimeRateByYear <- window( 
+#  monthlyCrimeRateByYear, 
+#  start = c( 2016, 1 ), 
+#  end = c( 2024, 12 ) )
 
 # render the plot
 crime_seasonplot <- monthlyCrimeRateByYear %>%
