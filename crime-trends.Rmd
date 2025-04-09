@@ -197,8 +197,12 @@ ggplot() +
   geom_line( data = forecast_data, aes(x = ds, y = yhat), color = "#c41104", linetype = "dashed") +  # Forecasted data
   geom_ribbon(data = forecast_data, aes(x = ds, ymin = lower, ymax = upper), alpha = 0.2) +  # Confidence interval
   labs( title = "Plot of Monthly Crime Rate by Years for Phoenix, AZ with Predicted Trend",
-       x = "Date",
-       y = "Crime Count" ) +
+       x = "",
+       y = "Crime Rate" ) +
+  scale_x_continuous(
+    breaks = seq( min( crimeRatesYear$year ), max( crimeRatesYear$year ), by = 1 ),
+    labels = as.character
+  ) +
   theme_minimal()
 
 ```
