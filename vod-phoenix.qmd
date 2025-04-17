@@ -131,13 +131,15 @@ phoenix_data <- phoenix_data %>%
   mutate(
     day_of_week = wday( stop_date, label = TRUE ),
     stop_hour = hour( stop_time ),
-    officer_white = if_else( SIMPLE_EMPL_RE_GRP == "White",    1, 0 ),
-    officer_black = if_else( SIMPLE_EMPL_RE_GRP == "Black",    1, 0 ),
-    officer_hisp  = if_else( SIMPLE_EMPL_RE_GRP == "Hispanic", 1, 0 )
+    officer_white = if_else( SIMPLE_EMPL_RE_GRP  == "White",    1, 0 ),
+    officer_black = if_else( SIMPLE_EMPL_RE_GRP  == "Black",    1, 0 ),
+    officer_hisp  = if_else( SIMPLE_EMPL_RE_GRP  == "Hispanic", 1, 0 ),
+    officer_male  = if_else( ISSUING_OFFICER_SEX == "Male",    1, 0 ),
+    subj_male     = if_else( SUBJ_SEX            == "Male",    1, 0 )
   )
 
 # model for black
-model <- glm( driver_black ~ daylight + officer_black + officer_hisp,
+model <- glm( driver_black ~ daylight + officer_black + officer_hisp + officer_male + subj_male + SUBJ_AGE ,
              data = phoenix_data,
              weights = weight,
              family = binomial())
@@ -145,7 +147,7 @@ model <- glm( driver_black ~ daylight + officer_black + officer_hisp,
 summary( model )
 
 # model for hispanic
-model <- glm( driver_hisp ~ daylight + officer_black + officer_hisp,
+model <- glm( driver_hisp ~ daylight + officer_black + officer_hisp + officer_male + subj_male + SUBJ_AGE ,
              data = phoenix_data,
              weights = weight,
              family = binomial())
