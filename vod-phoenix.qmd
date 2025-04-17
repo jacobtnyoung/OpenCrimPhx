@@ -97,7 +97,8 @@ phoenix_data <- phoenix_data |>
 phoenix_data <- phoenix_data %>%
   filter( !is.na( SIMPLE_SUBJ_RE_GRP ) ) %>%
   mutate( driver_black = if_else( SIMPLE_SUBJ_RE_GRP == "Black", 1, 0 ) ) |> 
-  mutate( driver_hisp = if_else( SIMPLE_SUBJ_RE_GRP == "Hispanic", 1, 0 ) ) 
+  mutate( driver_hisp  = if_else( SIMPLE_SUBJ_RE_GRP == "Hispanic", 1, 0 ) ) |>
+  mutate( driver_white = if_else( SIMPLE_SUBJ_RE_GRP == "White", 1, 0 ) )
 
 ```
 
@@ -148,6 +149,14 @@ summary( model )
 
 # model for hispanic
 model <- glm( driver_hisp ~ daylight + officer_black + officer_hisp + officer_male + subj_male + SUBJ_AGE ,
+             data = phoenix_data,
+             weights = weight,
+             family = binomial())
+
+summary( model )
+
+# model for white
+model <- glm( driver_white ~ daylight + officer_black + officer_hisp + officer_male + subj_male + SUBJ_AGE ,
              data = phoenix_data,
              weights = weight,
              family = binomial())
