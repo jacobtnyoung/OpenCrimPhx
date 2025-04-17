@@ -1,0 +1,138 @@
+---
+title: "Traffic Citations in Phoenix"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+        theme: simplex 
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set( echo = TRUE,
+                       eval = TRUE,
+                       message = FALSE, 
+                       warning = FALSE, 
+                       fig.width = 12, 
+                       fig.height = 10 
+                       )
+
+```
+
+<br>
+
+```{r}
+
+# clear workspace
+rm( list = ls() )
+
+
+# load libraries
+library( dplyr )    # used for wrangling the data
+library( tidyr )    # used for wrangling the data
+library( ggplot2 )  # for plotting
+library( scales )   # for formatting the text
+library( forecast ) # for working with time series data
+library( here )     # for referencing the local directory
+library( viridis )  # for some coloring used in the plots
+library( stringr )
+
+
+# get the data file
+loc <- "data/citations_traffic-citations-details_citationdetail.csv"
+citations_dat <- read.csv( here( loc ), as.is = TRUE, header = TRUE )
+
+```  
+
+```{r}
+
+# reformat the month variable
+citations_dat$month  <- str_to_title ( sub( "^[0-9]{2}-", "", citations_dat$MONTH ) )
+
+
+# Create an object that is monthly counts and sorted by year
+citations_by_month <- 
+  citations_dat %>% 
+  select( YEAR, month ) %>%   
+  group_by( YEAR, month ) %>% 
+  summarize( counts = n() ) %>% 
+  spread( YEAR, counts ) %>% 
+  arrange( match( month, month.name ) ) %>% 
+  select( !month )
+
+
+# use the ts() function to create a time series object
+monthly_citations_by_year <- ts(
+  matrix( as.matrix( citations_by_month ), ncol = 1 ), 
+  start=c( min( citations_dat$YEAR ), 1 ), 
+  end=c( as.numeric( tail( names( citations_by_month ), n=1 ) ), 12 ), 
+  frequency=12
+)
+
+
+# render the plot
+monthly_citations_by_year |> 
+  ggseasonplot(
+    year.labels = TRUE,
+    continuous = FALSE,
+    col = viridis( n = dim( citations_by_month )[2], option = "cividis" ) ) +
+  scale_y_continuous( labels = comma ) +
+  geom_line( size = 1.5, alpha = 0.7 ) +
+  geom_point( size = 2, shape = 21, fill = "white", color = "black" ) + 
+  ggtitle( "Monthly Traffic Citation Counts in Phoenix, AZ" ) +
+  theme_minimal()
+
+
+```
+
+<br>
+
+
+```{r}
+
+# recode "unknown" and "other" to missing to make it simpler
+citations_dat <- citations_dat |> 
+  mutate( SIMPLE_SUBJ_RE_GRP = if_else( SIMPLE_SUBJ_RE_GRP == "Unknown", NA, SIMPLE_SUBJ_RE_GRP ) ) |> 
+  mutate( SIMPLE_SUBJ_RE_GRP = if_else( SIMPLE_SUBJ_RE_GRP == "Other"  , NA, SIMPLE_SUBJ_RE_GRP ) ) |> 
+  mutate( SIMPLE_EMPL_RE_GRP = if_else( SIMPLE_EMPL_RE_GRP == "Other"  , NA, SIMPLE_EMPL_RE_GRP ) )
+
+# Data prep
+prop_data <- citations_dat  |> 
+  drop_na( SIMPLE_EMPL_RE_GRP, SIMPLE_SUBJ_RE_GRP ) |> 
+  count( SIMPLE_EMPL_RE_GRP, SIMPLE_SUBJ_RE_GRP ) |> 
+  group_by( SIMPLE_EMPL_RE_GRP ) |> 
+  mutate( prop = n / sum(n) )
+
+# Plot with proportion labels
+ggplot( 
+  prop_data, 
+  aes( x = SIMPLE_EMPL_RE_GRP, y = SIMPLE_SUBJ_RE_GRP, fill = prop ) ) +
+  geom_tile() +
+  geom_text( aes( label = percent( prop, accuracy = 0.1 ) ), size = 3 ) +
+  scale_fill_gradient( low = "white", high = "firebrick") +
+  labs(
+    title = "Proportion of Suspect Race/Ethnicity by Officer Race/Ethnicity",
+    x = "Officer Race",
+    y = "Suspect Race",
+    fill = "Proportion"
+  )
+
+
+```
+
+###
+
+<br>
+
+----
+
+<p align="center">
+[Back to Open Criminology Phoenix page](https://jacobtnyoung.github.io/OpenCrimPhx/)
+</p>
+
+<br>
+
+***Please*** report any needed corrections to the [Issues](https://github.com/jacobtnyoung/OpenCrimPhx/issues/new) page. Thanks!
+
+<br><br>
+
+###### ***Last updated `r format(Sys.time(), '%d %B, %Y')`***
