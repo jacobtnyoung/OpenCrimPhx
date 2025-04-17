@@ -1,0 +1,157 @@
+---
+title: "Veil of Darkness Analysis: Phoenix Traffic Citations"
+format: html
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set( echo = TRUE, message = FALSE, warning = FALSE )
+
+# clear workspace
+rm( list = ls() )
+
+# load libraries
+library( here )
+library( tidyverse )
+library( lubridate )
+library( suncalc )
+library( hms )
+library( splines )
+
+```
+
+## Load and Prepare the Data
+
+```{r load-data}
+
+loc <- "data/citations_traffic-citations-details_citationdetail.csv"
+phoenix_data <- read.csv( here( loc ), as.is = TRUE, header = TRUE )
+
+```
+
+## Extract and Process Time Variables
+
+```{r time-processing}
+
+phoenix_data <- phoenix_data %>%
+  mutate(
+    stop_date = mdy( TICK_DATE ),
+    stop_time = as_hms( sprintf( "%02d:00:00", HOUR_OF_DAY ) )
+  )
+
+```
+
+## Get Sunset and Dusk Times for Phoenix
+
+```{r sun-times}
+
+sun_dates <- tibble(
+  date = unique( phoenix_data$stop_date ),
+  lat = 33.4484,
+  lon = -112.0740
+)
+
+sun_times <- getSunlightTimes(
+  data = sun_dates,
+  keep = c("sunset", "dusk"),
+  tz = "America/Phoenix"
+)
+
+sun_times <- sun_times %>%
+  select( date, sunset, dusk )
+
+phoenix_data <- phoenix_data %>%
+  left_join( sun_times, by = c( "stop_date" = "date" ) )
+
+```
+
+## Code Lighting Condition and Filter Ambiguous
+
+```{r lighting-condition}
+
+phoenix_data <- phoenix_data %>%
+  mutate(
+    sunset = as_hms( sunset ),
+    dusk = as_hms( dusk ),
+    light_condition = case_when(
+      stop_time < sunset ~ "daylight",
+      stop_time > dusk ~ "darkness",
+      TRUE ~ "ambiguous"
+    )
+  ) %>%
+  filter( light_condition != "ambiguous" )
+
+```
+
+## Clean the Sample
+
+```{r clean-sample}
+
+# recode "unknown" and "other" to missing to make it simpler
+phoenix_data <- phoenix_data |> 
+  mutate( SIMPLE_SUBJ_RE_GRP = if_else( SIMPLE_SUBJ_RE_GRP == "Unknown", NA, SIMPLE_SUBJ_RE_GRP ) ) |> 
+  mutate( SIMPLE_SUBJ_RE_GRP = if_else( SIMPLE_SUBJ_RE_GRP == "Other"  , NA, SIMPLE_SUBJ_RE_GRP ) ) |> 
+  mutate( SIMPLE_EMPL_RE_GRP = if_else( SIMPLE_EMPL_RE_GRP == "Other"  , NA, SIMPLE_EMPL_RE_GRP ) )
+
+# drop missing cases
+phoenix_data <- phoenix_data %>%
+  filter( !is.na( SIMPLE_SUBJ_RE_GRP ) ) %>%
+  mutate( driver_black = if_else( SIMPLE_SUBJ_RE_GRP == "Black", 1, 0 ) ) |> 
+  mutate( driver_hisp = if_else( SIMPLE_SUBJ_RE_GRP == "Hispanic", 1, 0 ) ) 
+
+```
+
+## Create Daylight Dummy Variable
+
+```{r daylight-var}
+
+phoenix_data <- phoenix_data %>%
+  mutate( daylight = if_else( light_condition == "daylight", 1, 0 ) )
+
+```
+
+## Weighting for Seasonality
+
+```{r seasonality-weights}
+
+weights_by_day <- phoenix_data %>%
+  group_by( stop_date ) %>%
+  summarize( weight = 1 - abs( mean( daylight ) - 0.5 ) )
+
+phoenix_data <- phoenix_data %>%
+  left_join( weights_by_day, by = "stop_date" )
+
+```
+
+## Logistic Regression (Basic Model)
+
+```{r regression-model}
+
+phoenix_data <- phoenix_data %>%
+  mutate(
+    day_of_week = wday( stop_date, label = TRUE ),
+    stop_hour = hour( stop_time ),
+    officer_white = if_else( SIMPLE_EMPL_RE_GRP == "White",    1, 0 ),
+    officer_black = if_else( SIMPLE_EMPL_RE_GRP == "Black",    1, 0 ),
+    officer_hisp  = if_else( SIMPLE_EMPL_RE_GRP == "Hispanic", 1, 0 )
+  )
+
+# model for black
+model <- glm( driver_black ~ daylight + officer_black + officer_hisp,
+             data = phoenix_data,
+             weights = weight,
+             family = binomial())
+
+summary( model )
+
+# model for hispanic
+model <- glm( driver_hisp ~ daylight + officer_black + officer_hisp,
+             data = phoenix_data,
+             weights = weight,
+             family = binomial())
+
+summary( model )
+
+
+```
+

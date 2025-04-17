@@ -43,6 +43,8 @@ citations_dat <- read.csv( here( loc ), as.is = TRUE, header = TRUE )
 
 ```  
 
+There are `r dim( citations_dat )[1]` traffic stops between `r min( citations_dat$YEAR )` and `r max( citations_dat$YEAR )`.
+
 ```{r}
 
 # reformat the month variable
