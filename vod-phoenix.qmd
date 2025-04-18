@@ -111,6 +111,26 @@ phoenix_data <- phoenix_data %>%
 
 ```
 
+## Tables for Stops
+
+```{r race-tables}
+
+# create a table to show stops based on race and daylight
+
+table( phoenix_data$driver_black, phoenix_data$daylight )
+
+THink about how to build this how you want it.
+
+for time, I think you want to show the proportion over time by months
+then maybe you can show the dates of certain events and whether 
+that influenced outcomes
+
+where there particular events in phoenix that mattered?
+
+
+
+```
+
 ## Weighting for Seasonality
 
 ```{r seasonality-weights}
@@ -140,7 +160,11 @@ phoenix_data <- phoenix_data %>%
   )
 
 # model for black
-model <- glm( driver_black ~ daylight + officer_black + officer_hisp + officer_male + subj_male + SUBJ_AGE ,
+model <- glm( driver_black 
+              ~ daylight 
+              + officer_black + officer_hisp + officer_male 
+              + subj_male + SUBJ_AGE
+              + factor( YEAR ) + factor( BEAT_NUM ),
              data = phoenix_data,
              weights = weight,
              family = binomial())
