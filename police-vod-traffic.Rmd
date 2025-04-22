@@ -1,5 +1,5 @@
 ---
-title: "Examining Bias in Police Stops in Phoenix"
+title: "Examining Racial Bias in Police Stops in Phoenix"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
   html_document:
@@ -205,12 +205,13 @@ The table shows the percentage of stops by race/ethnicity.
   
     + Citizens who were coded as **Black** made up `r race_pct_table[1,2]` percent of all traffic stops, whereas those coded as **Hispanic** made up `r race_pct_table[1,3]` percent.
 
+  <br>
   
   + The *Darkness* row represents the percentage of stops that were coded as **dark** and the *Daylight* row represents the percentage of stops that were coded as **light**. Comparing these within racial/ethnic groups gives some indication of whether there are differences in citations by day versus night.
   
-    + Citizens who were coded as **Black** represent `r race_pct_table[2,2]` percent of traffic stops at night whereas this same group represents `r race_pct_table[3,2]` percent of traffic stops during the day. In other words, citizens who are **Black** are less likely to be pulled over during the day, than at night.
+    + Citizens who were coded as **Black** represent `r race_pct_table[2,2]` percent of traffic stops during the day whereas this same group represents `r race_pct_table[3,2]` percent of traffic stops at night. In other words, citizens who are **Black** are less likely to be pulled over during the day, than at night.
 
-    + Citizens who were coded as **Hispanic** represent `r race_pct_table[2,3]` percent of traffic stops at night whereas this same group represents `r race_pct_table[3,3]` percent of traffic stops during the day. In other words, citizens who are **Hispanic** are less likely to be pulled over during the day, than at night.
+    + Citizens who were coded as **Hispanic** represent `r race_pct_table[2,3]` percent of traffic stops during the day whereas this same group represents `r race_pct_table[3,3]` percent of traffic stops at night. In other words, citizens who are **Hispanic** are less likely to be pulled over during the day, than at night.
 
 Note that these differences do not adjust for any situational characteristics. In the next steps, we want to weight the days by the amount of sun as suggested by [Knode et al. (2024)](https://onlinelibrary.wiley.com/doi/10.1111/1745-9125.12366).
 
