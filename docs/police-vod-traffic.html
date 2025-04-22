@@ -445,7 +445,7 @@ total_row &lt;- phoenix_dat %&gt;%
   mutate(pct = round(n / sum(n) * 100, 2)) %&gt;%
   select(-n) %&gt;%
   pivot_wider(names_from = SIMPLE_SUBJ_RE_GRP, values_from = pct) %&gt;%
-  mutate(Category = &quot;Total&quot;) %&gt;%
+  mutate(Category = &quot;All Stops&quot;) %&gt;%
   select(Category, Black, Hispanic, White)
 
 # Combine and order rows
@@ -455,10 +455,10 @@ race_pct_table &lt;- bind_rows(total_row, race_pct_table) %&gt;%
 
 # Display using pander
 pander( race_pct_table, caption = &quot;Percentage of Stops by Race and Light Condition&quot; )</code></pre>
-<table style="width:53%;">
+<table style="width:54%;">
 <caption>Percentage of Stops by Race and Light Condition</caption>
 <colgroup>
-<col width="15%" />
+<col width="16%" />
 <col width="11%" />
 <col width="15%" />
 <col width="11%" />
@@ -473,22 +473,22 @@ pander( race_pct_table, caption = &quot;Percentage of Stops by Race and Light Co
 </thead>
 <tbody>
 <tr class="odd">
+<td align="center">All Stops</td>
+<td align="center">13.82</td>
+<td align="center">44.36</td>
+<td align="center">41.82</td>
+</tr>
+<tr class="even">
 <td align="center">Daylight</td>
 <td align="center">13.57</td>
 <td align="center">43.14</td>
 <td align="center">43.29</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td align="center">Darkness</td>
 <td align="center">15.19</td>
 <td align="center">50.9</td>
 <td align="center">33.9</td>
-</tr>
-<tr class="odd">
-<td align="center">NA</td>
-<td align="center">13.82</td>
-<td align="center">44.36</td>
-<td align="center">41.82</td>
 </tr>
 </tbody>
 </table>
@@ -497,9 +497,9 @@ pander( race_pct_table, caption = &quot;Percentage of Stops by Race and Light Co
 <li><p>The <em>All Stops</em> row represents the percentage of all stops
 that the specific racial/ethnic group represents.</p>
 <ul>
-<li>Citizens who were coded as <strong>Black</strong> made up 13.57
+<li>Citizens who were coded as <strong>Black</strong> made up 13.82
 percent of all traffic stops, whereas those coded as
-<strong>Hispanic</strong> made up 43.14 percent.</li>
+<strong>Hispanic</strong> made up 44.36 percent.</li>
 </ul></li>
 <li><p>The <em>Darkness</em> row represents the percentage of stops that
 were coded as <strong>dark</strong> and the <em>Daylight</em> row
@@ -508,16 +508,16 @@ represents the percentage of stops that were coded as
 gives some indication of whether there are differences in citations by
 day versus night.</p>
 <ul>
-<li><p>Citizens who were coded as <strong>Black</strong> represent 15.19
+<li><p>Citizens who were coded as <strong>Black</strong> represent 13.57
 percent of traffic stops at night whereas this same group represents
-13.82 percent of traffic stops during the day. In other words, citizens
+15.19 percent of traffic stops during the day. In other words, citizens
 who are <strong>Black</strong> are less likely to be pulled over during
 the day, than at night.</p></li>
 <li><p>Citizens who were coded as <strong>Hispanic</strong> represent
-50.9 percent of traffic stops at night whereas this same group
-represents 44.36 percent of traffic stops during the day. In other
-words, citizens who are <strong>Hispanic</strong> are less likely to be
-pulled over during the day, than at night.</p></li>
+43.14 percent of traffic stops at night whereas this same group
+represents 50.9 percent of traffic stops during the day. In other words,
+citizens who are <strong>Hispanic</strong> are less likely to be pulled
+over during the day, than at night.</p></li>
 </ul></li>
 </ul>
 <p>Note that these differences do not adjust for any situational
@@ -550,9 +550,9 @@ phoenix_dat &lt;- phoenix_dat %&gt;%
 <div id="predicting-driver-race" class="section level2">
 <h2>Predicting Driver Race</h2>
 <p>Now, we can estimate whether daylight (versus night) predicts a stop.
-Specifically, if black or hispanic drivers are more likely to be cited
-during the day (i.e. a positive coefficient for ’daylight`) then there
-is evidence of racial bias in citations.</p>
+Specifically, if Black or Hispanic drivers are more likely to be cited
+during the day (i.e. a positive coefficient for <code>daylight</code>)
+then there is evidence of racial bias in citations.</p>
 <p><br></p>
 <div id="simple-model-for-daylight" class="section level3">
 <h3>Simple Model for Daylight</h3>

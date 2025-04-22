@@ -186,7 +186,7 @@ total_row <- phoenix_dat %>%
   mutate(pct = round(n / sum(n) * 100, 2)) %>%
   select(-n) %>%
   pivot_wider(names_from = SIMPLE_SUBJ_RE_GRP, values_from = pct) %>%
-  mutate(Category = "Total") %>%
+  mutate(Category = "All Stops") %>%
   select(Category, Black, Hispanic, White)
 
 # Combine and order rows
@@ -204,6 +204,7 @@ The table shows the percentage of stops by race/ethnicity.
   + The *All Stops* row represents the percentage of all stops that the specific racial/ethnic group represents.
   
     + Citizens who were coded as **Black** made up `r race_pct_table[1,2]` percent of all traffic stops, whereas those coded as **Hispanic** made up `r race_pct_table[1,3]` percent.
+
   
   + The *Darkness* row represents the percentage of stops that were coded as **dark** and the *Daylight* row represents the percentage of stops that were coded as **light**. Comparing these within racial/ethnic groups gives some indication of whether there are differences in citations by day versus night.
   
@@ -247,7 +248,7 @@ phoenix_dat <- phoenix_dat %>%
 
 ## Predicting Driver Race
 
-Now, we can estimate whether daylight (versus night) predicts a stop. Specifically, if black or hispanic drivers are more likely to be cited during the day (i.e. a positive coefficient for 'daylight`) then there is evidence of racial bias in citations. 
+Now, we can estimate whether daylight (versus night) predicts a stop. Specifically, if Black or Hispanic drivers are more likely to be cited during the day (i.e. a positive coefficient for `daylight`) then there is evidence of racial bias in citations. 
 
 <br>
 
