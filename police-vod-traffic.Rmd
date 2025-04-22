@@ -1,0 +1,439 @@
+---
+title: "Examining Bias in Police Stops in Phoenix"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+        theme: simplex
+        code_folding: hide
+---
+
+
+Racial disparities in traffic stops are a critical area of inquiry as traffic stops are the most frequent form of police-initiated contact. However, traditional benchmarking methods used to assess racial bias—such as comparing stop rates to census demographics—fail to account for variations in driving exposure, police deployment, and temporal patterns. 
+
+To address these methodological shortcomings, this analysis uses the *veil of darkness* (VOD) hypothesis originally developed by [Grogger and Ridgeway (2006)](https://www.tandfonline.com/doi/abs/10.1198/016214506000000168). The VOD hypothesis leverages a natural experiment that capitalizes on changes in daylight across the year to evaluate whether officers are more likely to stop drivers of color during times when their race is visible (daylight) versus not (darkness). 
+
+Following best practices articulated by [Knode et al. (2024)](https://onlinelibrary.wiley.com/doi/10.1111/1745-9125.12366), I apply this method to [traffic citation data](https://www.phoenixopendata.com/dataset/citations) from the [Phoenix Open Data Portal](https://www.phoenixopendata.com/). This dataset contains traffic citation information (criminal and civil) from January 2018 forward, including demographic information for officers as well as individuals. I test for racial bias, focusing on stops during the "intertwilight period" where both daylight and darkness occur at the same clock times throughout the year. This approach allows for a more rigorous assessment of racial bias in traffic stop decisions, free from the confounding factors that hinder traditional analyses.
+
+<br><br>
+
+## Setup and Loading the Data
+
+First we need to clear the workspace and load the libraries we are going to use.
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set( echo = TRUE, message = FALSE, warning = FALSE )
+
+# clear workspace
+rm( list = ls() )
+
+# load libraries
+library( here )
+library( tidyverse )
+library( lubridate )
+library( suncalc )
+library( hms )
+library( pander )
+library( broom )
+
+```
+
+<br>
+
+### Load and Prepare the Data
+
+```{r load-data}
+
+loc <- "data/citations_traffic-citations-details_citationdetail.csv"
+phoenix_dat <- read.csv( here( loc ), as.is = TRUE, header = TRUE )
+
+```
+
+There are `r dim( phoenix_dat )[1]` traffic incidents from `r min( phoenix_dat$YEAR )` to `r max( phoenix_dat$YEAR )`.
+
+<br>
+
+### Extract and Process Time Variables
+
+```{r time-processing}
+
+phoenix_dat <- phoenix_dat  |> 
+  mutate(
+    stop_date = mdy( TICK_DATE ),
+    stop_time = as_hms( sprintf( "%02d:00:00", HOUR_OF_DAY ) )
+  )
+
+```
+
+<br>
+
+### Get Sunset and Dusk Times for Phoenix
+
+```{r sun-times}
+
+sun_dates <- tibble(
+  date = unique( phoenix_dat$stop_date ),
+  lat = 33.4484,
+  lon = -112.0740
+)
+
+sun_times <- getSunlightTimes(
+  data = sun_dates,
+  keep = c( "sunset", "dusk" ),
+  tz = "America/Phoenix"
+)
+
+sun_times <- sun_times |> 
+  select( date, sunset, dusk )
+
+phoenix_dat <- phoenix_dat  |> 
+  left_join( sun_times, by = c( "stop_date" = "date" ) )
+
+```
+
+<br>
+
+### Code Lighting Condition
+
+```{r lighting-condition}
+
+phoenix_dat <- phoenix_dat  |> 
+  mutate(
+    sunset = as_hms( sunset ),
+    dusk = as_hms( dusk ),
+    light_condition = case_when(
+      stop_time < sunset ~ "daylight",
+      stop_time > dusk ~ "darkness",
+      TRUE ~ "ambiguous"
+    )
+  ) |> 
+  filter( light_condition != "ambiguous" )
+
+```
+
+<br>
+
+## Clean a Few Variables
+
+There are two variables that are of interest for our analysis:  
+
+  + `SIMPLE_SUBJ_RE_GRP` is a simple recoding of the `SUBJ_RACE` and `SUBJ_ETHNICITY` variables provided in the data. Specifically, this is the race/ethnicity of individuals grouped into four categories: Black or African American, Hispanic, White, Other. To create the simplified race/ethnicity grouping, individuals with an ethnicity entered as "Hispanic" were included in the "Hispanic" category, regardless of the race entered. Individuals with Black or African American entered even if a blend such as Black/ White or American Indian/Black are included in the "Black or African American" category.
+  
+  + `SIMPLE_EMPL_RE_GRP` is similar to `SIMPE_SUBJ_RE_GRP`, but pertains to the officer, not the citizen.
+
+For these variables there are `r sum( phoenix_dat$SIMPLE_SUBJ_RE_GRP == "Unknown" )` in which the citizen's race/ethnicity is listed as *Unknown* and `r sum( phoenix_dat$SIMPLE_SUBJ_RE_GRP == "Other" )` listed as *Other*. These are removed from the analysis. *Unknown* and *Other* represent `r round( sum(phoenix_dat$SIMPLE_SUBJ_RE_GRP == "Unknown") / dim( phoenix_dat )[1], 2 ) * 100` and `r round( sum(phoenix_dat$SIMPLE_SUBJ_RE_GRP == "Other") / dim( phoenix_dat )[1], 2 ) * 100`, percent of all cases, respectively. Also, there are `r sum( phoenix_dat$SIMPLE_EMPL_RE_GRP == "Other" )` in which the officer's race/ethnicity is listed as *Other*. 
+
+These incidents are coded as missing (i.e. `NA`) and removed from the analysis.
+
+<br>
+
+```{r clean-sample}
+
+# recode "unknown" and "other" to missing to make it simpler
+phoenix_dat <- phoenix_dat |> 
+  mutate( SIMPLE_SUBJ_RE_GRP = if_else( SIMPLE_SUBJ_RE_GRP == "Unknown", NA, SIMPLE_SUBJ_RE_GRP ) ) |> 
+  mutate( SIMPLE_SUBJ_RE_GRP = if_else( SIMPLE_SUBJ_RE_GRP == "Other"  , NA, SIMPLE_SUBJ_RE_GRP ) ) |> 
+  mutate( SIMPLE_EMPL_RE_GRP = if_else( SIMPLE_EMPL_RE_GRP == "Other"  , NA, SIMPLE_EMPL_RE_GRP ) )
+
+# drop missing cases
+phoenix_dat <- phoenix_dat  |> 
+  filter( !is.na( SIMPLE_SUBJ_RE_GRP ) )  |> 
+  mutate( driver_black = if_else( SIMPLE_SUBJ_RE_GRP == "Black", 1, 0 ) ) |> 
+  mutate( driver_hisp  = if_else( SIMPLE_SUBJ_RE_GRP == "Hispanic", 1, 0 ) ) |>
+  mutate( driver_white = if_else( SIMPLE_SUBJ_RE_GRP == "White", 1, 0 ) )
+
+```
+
+<br>
+
+### Create Daylight Dummy Variable
+
+```{r daylight-var}
+
+phoenix_dat <- phoenix_dat  |> 
+  mutate( daylight = if_else( light_condition == "daylight", 1, 0 ) )
+
+```
+
+## Tables for Stops
+
+Now that the data are prepared, let's first look at a bivariate table for daytime for night and driver race/ethnicity.
+
+<br>
+
+```{r race-tables}
+
+# Summarize race proportions by light condition
+race_pct_table <- phoenix_dat  |> 
+  group_by(daylight, SIMPLE_SUBJ_RE_GRP) |> 
+  summarize(n = n(), .groups = "drop")  |> 
+  group_by(daylight)  |> 
+  mutate(pct = round(n / sum(n) * 100, 2))  |> 
+  select(-n) |> 
+  pivot_wider(names_from = SIMPLE_SUBJ_RE_GRP, values_from = pct) |> 
+  rename(Category = daylight) |> 
+  mutate(Category = case_when(
+    Category == 1 ~ "Daylight",
+    Category == 0 ~ "Darkness",
+    TRUE ~ as.character(Category)
+  )) %>%
+  select(Category, Black, Hispanic, White)
+
+# Create total row
+total_row <- phoenix_dat %>%
+  filter(SIMPLE_SUBJ_RE_GRP %in% c("Black", "Hispanic", "White")) %>%
+  count(SIMPLE_SUBJ_RE_GRP) %>%
+  mutate(pct = round(n / sum(n) * 100, 2)) %>%
+  select(-n) %>%
+  pivot_wider(names_from = SIMPLE_SUBJ_RE_GRP, values_from = pct) %>%
+  mutate(Category = "Total") %>%
+  select(Category, Black, Hispanic, White)
+
+# Combine and order rows
+race_pct_table <- bind_rows(total_row, race_pct_table) %>%
+  mutate(Category = factor(Category, levels = c("All Stops", "Daylight", "Darkness"))) %>%
+  arrange(Category)
+
+# Display using pander
+pander( race_pct_table, caption = "Percentage of Stops by Race and Light Condition" )
+
+```
+
+The table shows the percentage of stops by race/ethnicity.
+
+  + The *All Stops* row represents the percentage of all stops that the specific racial/ethnic group represents.
+  
+    + Citizens who were coded as **Black** made up `r race_pct_table[1,2]` percent of all traffic stops, whereas those coded as **Hispanic** made up `r race_pct_table[1,3]` percent.
+  
+  + The *Darkness* row represents the percentage of stops that were coded as **dark** and the *Daylight* row represents the percentage of stops that were coded as **light**. Comparing these within racial/ethnic groups gives some indication of whether there are differences in citations by day versus night.
+  
+    + Citizens who were coded as **Black** represent `r race_pct_table[2,2]` percent of traffic stops at night whereas this same group represents `r race_pct_table[3,2]` percent of traffic stops during the day. In other words, citizens who are **Black** are less likely to be pulled over during the day, than at night.
+
+    + Citizens who were coded as **Hispanic** represent `r race_pct_table[2,3]` percent of traffic stops at night whereas this same group represents `r race_pct_table[3,3]` percent of traffic stops during the day. In other words, citizens who are **Hispanic** are less likely to be pulled over during the day, than at night.
+
+Note that these differences do not adjust for any situational characteristics. In the next steps, we want to weight the days by the amount of sun as suggested by [Knode et al. (2024)](https://onlinelibrary.wiley.com/doi/10.1111/1745-9125.12366).
+
+<br>
+
+## Weighting for Seasonality
+
+```{r seasonality-weights}
+
+weights_by_day <- phoenix_dat %>%
+  group_by( stop_date ) %>%
+  summarize( weight = 1 - abs( mean( daylight ) - 0.5 ) )
+
+phoenix_dat <- phoenix_dat %>%
+  left_join( weights_by_day, by = "stop_date" )
+
+```
+
+```{r variable-rename}
+
+phoenix_dat <- phoenix_dat %>%
+  mutate(
+    day_of_week = wday( stop_date, label = TRUE ),
+    stop_hour = hour( stop_time ),
+    officer_white = if_else( SIMPLE_EMPL_RE_GRP  == "White",    1, 0 ),
+    officer_black = if_else( SIMPLE_EMPL_RE_GRP  == "Black",    1, 0 ),
+    officer_hisp  = if_else( SIMPLE_EMPL_RE_GRP  == "Hispanic", 1, 0 ),
+    officer_male  = if_else( ISSUING_OFFICER_SEX == "Male",    1, 0 ),
+    subj_male     = if_else( SUBJ_SEX            == "Male",    1, 0 )
+  )
+
+```
+
+<br>
+
+## Predicting Driver Race
+
+Now, we can estimate whether daylight (versus night) predicts a stop. Specifically, if black or hispanic drivers are more likely to be cited during the day (i.e. a positive coefficient for 'daylight`) then there is evidence of racial bias in citations. 
+
+<br>
+
+### Simple Model for Daylight
+
+```{r basic-regression-model}
+
+# model for black
+model_black <- glm( driver_black 
+              ~ daylight ,
+             data = phoenix_dat,
+             weights = weight,
+             family = binomial() )
+
+
+# model for hispanic
+model_hisp <- glm( driver_hisp 
+              ~ daylight ,
+             data = phoenix_dat,
+             weights = weight,
+             family = binomial() )
+
+
+# model for white
+model_white <- glm( driver_white 
+              ~ daylight ,
+             data = phoenix_dat,
+             weights = weight,
+             family = binomial() )
+
+```
+
+```{r basic-regression-table}
+
+# Updated function: extract estimate, SE, stars
+exclude_fx <- function(model, label) {
+  tidy(model) %>%
+    mutate(
+      formatted = sprintf("%.3f (%.3f)%s",
+                          estimate,
+                          std.error,
+                          case_when(
+                            p.value < 0.001 ~ "***",
+                            p.value < 0.01  ~ "**",
+                            p.value < 0.05  ~ "*",
+                            TRUE ~ ""
+                          ))
+    ) %>%
+    select(term, !!label := formatted)
+}
+
+# Get formatted results
+black_terms <- exclude_fx(model_black, "Black Driver")
+hisp_terms  <- exclude_fx(model_hisp,  "Hispanic Driver")
+white_terms <- exclude_fx(model_white, "White Driver")
+
+# Combine into single comparison table
+combined <- full_join(black_terms, hisp_terms, by = "term") %>%
+  full_join(white_terms, by = "term") %>%
+  arrange(term)
+
+# Reorder so daylight comes right after the intercept
+combined <- combined %>%
+  mutate(term = factor(term, levels = c("(Intercept)", "daylight", setdiff(term, c("(Intercept)", "daylight"))))) %>%
+  arrange(term)
+
+# Display with pander
+pander( combined, caption = "Models Predicting Driver Race/Ethnicity among Traffic Stops in Phoenix, Coefficients with Standard Errors")
+
+```
+
+The table above shows three models: one predicting whether the driver is Black, one predicting whether the driver is Hispanic, and one predicting whether the driver is White.
+
+The only predictor in the model is `daylight`, which is a dummy variable for whether it is daytime (=1) or night (=0). The negative coefficients predicting whether the driver is Black or Hispanic indicates that Black and Hispanic drivers are *less* likely to be pulled over during the day than at night. In contrast, we see that White drivers, relative to Black and Hispanic drivers are more likely to be pulled over during the day.
+
+
+<br>
+
+### Including Additional Predictors
+
+Let's take a look at the models. Each model includes controls for day of the week, the hour of the stop, officer race/ethnicity, officer sex, driver sex, driver age, year, and beat (much of these are excluded from the table below to help with visualization).
+
+```{r regression-model-full}
+
+# model for black
+model_black <- glm( driver_black 
+              ~ daylight 
+              + officer_black + officer_hisp + officer_male 
+              + subj_male + SUBJ_AGE
+              + factor( DAY_OF_WEEK )
+              + stop_hour
+              + factor( YEAR ) + factor( BEAT_NUM ),
+             data = phoenix_dat,
+             weights = weight,
+             family = binomial() )
+
+
+# model for hispanic
+model_hisp <- glm( driver_hisp 
+              ~ daylight 
+              + officer_black + officer_hisp + officer_male 
+              + subj_male + SUBJ_AGE
+              + factor( DAY_OF_WEEK )
+              + stop_hour
+              + factor( YEAR ) + factor( BEAT_NUM ),
+             data = phoenix_dat,
+             weights = weight,
+             family = binomial() )
+
+
+# model for white
+model_white <- glm( driver_white 
+              ~ daylight 
+              + officer_black + officer_hisp + officer_male 
+              + subj_male + SUBJ_AGE
+              + factor( DAY_OF_WEEK )
+              + stop_hour
+              + factor( YEAR ) + factor( BEAT_NUM ),
+             data = phoenix_dat,
+             weights = weight,
+             family = binomial() )
+
+```
+
+```{r full-regression-table}
+
+# Updated function: extract estimate, SE, stars
+exclude_fx <- function(model, label) {
+  tidy(model) %>%
+    filter(!grepl("^factor\\(YEAR\\)|^factor\\(BEAT_NUM\\)|^factor\\(DAY_OF_WEEK\\)", term)) %>%
+    mutate(
+      formatted = sprintf("%.3f (%.3f)%s",
+                          estimate,
+                          std.error,
+                          case_when(
+                            p.value < 0.001 ~ "***",
+                            p.value < 0.01  ~ "**",
+                            p.value < 0.05  ~ "*",
+                            TRUE ~ ""
+                          ))
+    ) %>%
+    select(term, !!label := formatted)
+}
+
+# Get formatted results
+black_terms <- exclude_fx(model_black, "Black Driver")
+hisp_terms  <- exclude_fx(model_hisp,  "Hispanic Driver")
+white_terms <- exclude_fx(model_white, "White Driver")
+
+# Combine into single comparison table
+combined <- full_join(black_terms, hisp_terms, by = "term") %>%
+  full_join(white_terms, by = "term") %>%
+  arrange(term)
+
+# Reorder so daylight comes right after the intercept
+combined <- combined %>%
+  mutate(term = factor(term, levels = c("(Intercept)", "daylight", setdiff(term, c("(Intercept)", "daylight"))))) %>%
+  arrange(term)
+
+# Display with pander
+pander( combined, caption = "Models Predicting Driver Race/Ethnicity among Traffic Stops in Phoenix, Coefficients with Standard Errors")
+
+```
+
+<br>
+
+This table shows that the findings from the bivariate table are robust to the inclusion of a variety of covariates. That is, the negative coefficients predicting whether the driver is Black or Hispanic indicates that Black and Hispanic drivers are *less* likely to be pulled over during the day than at night. In contrast, we see that White drivers, relative to Black and Hispanic drivers are more likely to be pulled over during the day. 
+
+<br>
+
+## Thoughts...
+
+Recall that the VOD hypothesis leverages a natural experiment that capitalizes on changes in daylight across the year to evaluate whether officers are more likely to stop drivers of color during times when their race is visible (daylight) versus not (darkness). This analysis showed that there is not evidence in the Phoenix traffic citation data to indicate that Black or Hispanic drivers are more likely to be pulled over during the day. 
+
+<br><br>
+
+----
+
+<p align="center">
+[Back to Open Criminology Phoenix page](https://jacobtnyoung.github.io/OpenCrimPhx/)
+</p>
+
+<br>
+
+***Please*** report any needed corrections to the [Issues](https://github.com/jacobtnyoung/OpenCrimPhx/issues/new) page. Thanks!
+
+<br><br>
+
+###### ***Last updated `r format(Sys.time(), '%d %B, %Y')`***

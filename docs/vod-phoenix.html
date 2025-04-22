@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+
+
+<title>Examining Bias in Police Stops in Phoenix</title>
+
+<script src="site_libs/header-attrs-2.25/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/simplex.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<script src="site_libs/navigation-1.1/codefolding.js"></script>
+<link href="site_libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+<style type="text/css">
+.code-folding-btn { margin-bottom: 4px; }
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">Open Criminology Phoenix (OCP)</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">About OCP</a>
+</li>
+<li>
+  <a href="intro.html">Intro to OCP</a>
+</li>
+<li>
+  <a href="crime.html">Crime in Phoenix</a>
+</li>
+<li>
+  <a href="police.html">Policing in Phoenix</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+<div class="btn-group pull-right float-right">
+<button type="button" class="btn btn-default btn-xs btn-secondary btn-sm dropdown-toggle" data-toggle="dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span>Code</span> <span class="caret"></span></button>
+<ul class="dropdown-menu dropdown-menu-right" style="min-width: 50px;">
+<li><a id="rmd-show-all-code" href="#">Show All Code</a></li>
+<li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li>
+</ul>
+</div>
+
+
+
+<h1 class="title toc-ignore">Examining Bias in Police Stops in
+Phoenix</h1>
+<h4 class="date">22 April, 2025</h4>
+
+</div>
+
+
+<p>Racial disparities in traffic stops are a critical area of inquiry as
+traffic stops are the most frequent form of police-initiated contact.
+However, traditional benchmarking methods used to assess racial
+bias—such as comparing stop rates to census demographics—fail to account
+for variations in driving exposure, police deployment, and temporal
+patterns.</p>
+<p>To address these methodological shortcomings, this analysis uses the
+<em>veil of darkness</em> (VOD) hypothesis originally developed by <a
+href="https://www.tandfonline.com/doi/abs/10.1198/016214506000000168">Grogger
+and Ridgeway (2006)</a>. The VOD hypothesis leverages a natural
+experiment that capitalizes on changes in daylight across the year to
+evaluate whether officers are more likely to stop drivers of color
+during times when their race is visible (daylight) versus not
+(darkness).</p>
+<p>Following best practices articulated by <a
+href="https://onlinelibrary.wiley.com/doi/10.1111/1745-9125.12366">Knode
+et al. (2024)</a>, I apply this method to <a
+href="https://www.phoenixopendata.com/dataset/citations">traffic
+citation data</a> from the <a
+href="https://www.phoenixopendata.com/">Phoenix Open Data Portal</a>.
+This dataset contains traffic citation information (criminal and civil)
+from January 2018 forward, including demographic information for
+officers as well as individuals. I test for racial bias, focusing on
+stops during the “intertwilight period” where both daylight and darkness
+occur at the same clock times throughout the year. This approach allows
+for a more rigorous assessment of racial bias in traffic stop decisions,
+free from the confounding factors that hinder traditional analyses.</p>
+<p><br><br></p>
+<div id="setup-and-loading-the-data" class="section level2">
+<h2>Setup and Loading the Data</h2>
+<p>First we need to clear the workspace and load the libraries we are
+going to use.</p>
+<p><br></p>
+<div id="load-and-prepare-the-data" class="section level3">
+<h3>Load and Prepare the Data</h3>
+<pre class="r"><code>loc &lt;- &quot;data/citations_traffic-citations-details_citationdetail.csv&quot;
+phoenix_dat &lt;- read.csv( here( loc ), as.is = TRUE, header = TRUE )</code></pre>
+<p>There are 318803 traffic incidents from 2018 to 2025.</p>
+<p><br></p>
+</div>
+<div id="extract-and-process-time-variables" class="section level3">
+<h3>Extract and Process Time Variables</h3>
+<pre class="r"><code>phoenix_dat &lt;- phoenix_dat  |&gt; 
+  mutate(
+    stop_date = mdy( TICK_DATE ),
+    stop_time = as_hms( sprintf( &quot;%02d:00:00&quot;, HOUR_OF_DAY ) )
+  )</code></pre>
+<p><br></p>
+</div>
+<div id="get-sunset-and-dusk-times-for-phoenix" class="section level3">
+<h3>Get Sunset and Dusk Times for Phoenix</h3>
+<pre class="r"><code>sun_dates &lt;- tibble(
+  date = unique( phoenix_dat$stop_date ),
+  lat = 33.4484,
+  lon = -112.0740
+)
+
+sun_times &lt;- getSunlightTimes(
+  data = sun_dates,
+  keep = c( &quot;sunset&quot;, &quot;dusk&quot; ),
+  tz = &quot;America/Phoenix&quot;
+)
+
+sun_times &lt;- sun_times |&gt; 
+  select( date, sunset, dusk )
+
+phoenix_dat &lt;- phoenix_dat  |&gt; 
+  left_join( sun_times, by = c( &quot;stop_date&quot; = &quot;date&quot; ) )</code></pre>
+<p><br></p>
+</div>
+<div id="code-lighting-condition" class="section level3">
+<h3>Code Lighting Condition</h3>
+<pre class="r"><code>phoenix_dat &lt;- phoenix_dat  |&gt; 
+  mutate(
+    sunset = as_hms( sunset ),
+    dusk = as_hms( dusk ),
+    light_condition = case_when(
+      stop_time &lt; sunset ~ &quot;daylight&quot;,
+      stop_time &gt; dusk ~ &quot;darkness&quot;,
+      TRUE ~ &quot;ambiguous&quot;
+    )
+  ) |&gt; 
+  filter( light_condition != &quot;ambiguous&quot; )</code></pre>
+<p><br></p>
+</div>
+</div>
+<div id="clean-a-few-variables" class="section level2">
+<h2>Clean a Few Variables</h2>
+<p>There are two variables that are of interest for our analysis:</p>
+<ul>
+<li><p><code>SIMPLE_SUBJ_RE_GRP</code> is a simple recoding of the
+<code>SUBJ_RACE</code> and <code>SUBJ_ETHNICITY</code> variables
+provided in the data. Specifically, this is the race/ethnicity of
+individuals grouped into four categories: Black or African American,
+Hispanic, White, Other. To create the simplified race/ethnicity
+grouping, individuals with an ethnicity entered as “Hispanic” were
+included in the “Hispanic” category, regardless of the race entered.
+Individuals with Black or African American entered even if a blend such
+as Black/ White or American Indian/Black are included in the “Black or
+African American” category.</p></li>
+<li><p><code>SIMPLE_EMPL_RE_GRP</code> is similar to
+<code>SIMPE_SUBJ_RE_GRP</code>, but pertains to the officer, not the
+citizen.</p></li>
+</ul>
+<p>For these variables there are 341 in which the citizen’s
+race/ethnicity is listed as <em>Unknown</em> and 10357 listed as
+<em>Other</em>. These are removed from the analysis. <em>Unknown</em>
+and <em>Other</em> represent 0 and 3, percent of all cases,
+respectively. Also, there are 11778 in which the officer’s
+race/ethnicity is listed as <em>Other</em>.</p>
+<p>These incidents are coded as missing (i.e. <code>NA</code>) and
+removed from the analysis.</p>
+<p><br></p>
+<pre class="r"><code># recode &quot;unknown&quot; and &quot;other&quot; to missing to make it simpler
+phoenix_dat &lt;- phoenix_dat |&gt; 
+  mutate( SIMPLE_SUBJ_RE_GRP = if_else( SIMPLE_SUBJ_RE_GRP == &quot;Unknown&quot;, NA, SIMPLE_SUBJ_RE_GRP ) ) |&gt; 
+  mutate( SIMPLE_SUBJ_RE_GRP = if_else( SIMPLE_SUBJ_RE_GRP == &quot;Other&quot;  , NA, SIMPLE_SUBJ_RE_GRP ) ) |&gt; 
+  mutate( SIMPLE_EMPL_RE_GRP = if_else( SIMPLE_EMPL_RE_GRP == &quot;Other&quot;  , NA, SIMPLE_EMPL_RE_GRP ) )
+
+# drop missing cases
+phoenix_dat &lt;- phoenix_dat  |&gt; 
+  filter( !is.na( SIMPLE_SUBJ_RE_GRP ) )  |&gt; 
+  mutate( driver_black = if_else( SIMPLE_SUBJ_RE_GRP == &quot;Black&quot;, 1, 0 ) ) |&gt; 
+  mutate( driver_hisp  = if_else( SIMPLE_SUBJ_RE_GRP == &quot;Hispanic&quot;, 1, 0 ) ) |&gt;
+  mutate( driver_white = if_else( SIMPLE_SUBJ_RE_GRP == &quot;White&quot;, 1, 0 ) )</code></pre>
+<p><br></p>
+<div id="create-daylight-dummy-variable" class="section level3">
+<h3>Create Daylight Dummy Variable</h3>
+<pre class="r"><code>phoenix_dat &lt;- phoenix_dat  |&gt; 
+  mutate( daylight = if_else( light_condition == &quot;daylight&quot;, 1, 0 ) )</code></pre>
+</div>
+</div>
+<div id="tables-for-stops" class="section level2">
+<h2>Tables for Stops</h2>
+<p>Now that the data are prepared, let’s first look at a bivariate table
+for daytime for night and driver race/ethnicity.</p>
+<p><br></p>
+<pre class="r"><code># Summarize race proportions by light condition
+race_pct_table &lt;- phoenix_dat  |&gt; 
+  group_by(daylight, SIMPLE_SUBJ_RE_GRP) |&gt; 
+  summarize(n = n(), .groups = &quot;drop&quot;)  |&gt; 
+  group_by(daylight)  |&gt; 
+  mutate(pct = round(n / sum(n) * 100, 2))  |&gt; 
+  select(-n) |&gt; 
+  pivot_wider(names_from = SIMPLE_SUBJ_RE_GRP, values_from = pct) |&gt; 
+  rename(Category = daylight) |&gt; 
+  mutate(Category = case_when(
+    Category == 1 ~ &quot;Daylight&quot;,
+    Category == 0 ~ &quot;Darkness&quot;,
+    TRUE ~ as.character(Category)
+  )) %&gt;%
+  select(Category, Black, Hispanic, White)
+
+# Create total row
+total_row &lt;- phoenix_dat %&gt;%
+  filter(SIMPLE_SUBJ_RE_GRP %in% c(&quot;Black&quot;, &quot;Hispanic&quot;, &quot;White&quot;)) %&gt;%
+  count(SIMPLE_SUBJ_RE_GRP) %&gt;%
+  mutate(pct = round(n / sum(n) * 100, 2)) %&gt;%
+  select(-n) %&gt;%
+  pivot_wider(names_from = SIMPLE_SUBJ_RE_GRP, values_from = pct) %&gt;%
+  mutate(Category = &quot;Total&quot;) %&gt;%
+  select(Category, Black, Hispanic, White)
+
+# Combine and order rows
+race_pct_table &lt;- bind_rows(total_row, race_pct_table) %&gt;%
+  mutate(Category = factor(Category, levels = c(&quot;Total&quot;, &quot;Daylight&quot;, &quot;Darkness&quot;))) %&gt;%
+  arrange(Category)
+
+# Display using pander
+pander( race_pct_table, caption = &quot;Percentage of Stops by Race and Light Condition&quot; )</code></pre>
+<table style="width:53%;">
+<caption>Percentage of Stops by Race and Light Condition</caption>
+<colgroup>
+<col width="15%" />
+<col width="11%" />
+<col width="15%" />
+<col width="11%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="center">Category</th>
+<th align="center">Black</th>
+<th align="center">Hispanic</th>
+<th align="center">White</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="center">Total</td>
+<td align="center">13.82</td>
+<td align="center">44.36</td>
+<td align="center">41.82</td>
+</tr>
+<tr class="even">
+<td align="center">Daylight</td>
+<td align="center">13.57</td>
+<td align="center">43.14</td>
+<td align="center">43.29</td>
+</tr>
+<tr class="odd">
+<td align="center">Darkness</td>
+<td align="center">15.19</td>
+<td align="center">50.9</td>
+<td align="center">33.9</td>
+</tr>
+</tbody>
+</table>
+<p>The table shows the percentage of stops by race/ethnicity.</p>
+<ul>
+<li><p>The <em>Total</em> row represents the percentage of all stops
+that the specific racial/ethnic group represents.</p>
+<ul>
+<li>Citizens who were coded as <strong>Black</strong> made up 13.82
+percent of all traffic stops, whereas those coded as
+<strong>Hispanic</strong> made up 44.36 percent.</li>
+</ul></li>
+<li><p>The <em>Darkness</em> row represents the percentage of stops that
+were coded as <strong>dark</strong> and the <em>Daylight</em> row
+represents the percentage of stops that were coded as
+<strong>light</strong>. Comparing these within racial/ethnic groups
+gives some indication of whether there are differences in citations by
+day versus night.</p>
+<ul>
+<li><p>Citizens who were coded as <strong>Black</strong> represent 13.57
+percent of traffic stops at night whereas this same group represents
+15.19 percent of traffic stops during the day. In other words, citizens
+who are <strong>Black</strong> are less likely to be pulled over during
+the day, than at night.</p></li>
+<li><p>Citizens who were coded as <strong>Hispanic</strong> represent
+43.14 percent of traffic stops at night whereas this same group
+represents 50.9 percent of traffic stops during the day. In other words,
+citizens who are <strong>Hispanic</strong> are less likely to be pulled
+over during the day, than at night.</p></li>
+</ul></li>
+</ul>
+<p>Note that these differences do not adjust for any situational
+characteristics. In the next steps, we want to weight the days by the
+amount of sun as suggested by <a
+href="https://onlinelibrary.wiley.com/doi/10.1111/1745-9125.12366">Knode
+et al. (2024)</a>.</p>
+<p><br></p>
+</div>
+<div id="weighting-for-seasonality" class="section level2">
+<h2>Weighting for Seasonality</h2>
+<pre class="r"><code>weights_by_day &lt;- phoenix_dat %&gt;%
+  group_by( stop_date ) %&gt;%
+  summarize( weight = 1 - abs( mean( daylight ) - 0.5 ) )
+
+phoenix_dat &lt;- phoenix_dat %&gt;%
+  left_join( weights_by_day, by = &quot;stop_date&quot; )</code></pre>
+<pre class="r"><code>phoenix_dat &lt;- phoenix_dat %&gt;%
+  mutate(
+    day_of_week = wday( stop_date, label = TRUE ),
+    stop_hour = hour( stop_time ),
+    officer_white = if_else( SIMPLE_EMPL_RE_GRP  == &quot;White&quot;,    1, 0 ),
+    officer_black = if_else( SIMPLE_EMPL_RE_GRP  == &quot;Black&quot;,    1, 0 ),
+    officer_hisp  = if_else( SIMPLE_EMPL_RE_GRP  == &quot;Hispanic&quot;, 1, 0 ),
+    officer_male  = if_else( ISSUING_OFFICER_SEX == &quot;Male&quot;,    1, 0 ),
+    subj_male     = if_else( SUBJ_SEX            == &quot;Male&quot;,    1, 0 )
+  )</code></pre>
+<p><br></p>
+</div>
+<div id="predicting-driver-race" class="section level2">
+<h2>Predicting Driver Race</h2>
+<p>Now, we can estimate whether daylight (versus night) predicts a stop.
+Specifically, if black or hispanic drivers are more likely to be cited
+during the day (i.e. a positive coefficient for ’daylight`) then there
+is evidence of racial bias in citations.</p>
+<div id="simple-model-for-daylight" class="section level3">
+<h3>Simple Model for Daylight</h3>
+<pre class="r"><code># model for black
+model_black &lt;- glm( driver_black 
+              ~ daylight ,
+             data = phoenix_dat,
+             weights = weight,
+             family = binomial() )
+
+
+# model for hispanic
+model_hisp &lt;- glm( driver_hisp 
+              ~ daylight ,
+             data = phoenix_dat,
+             weights = weight,
+             family = binomial() )
+
+
+# model for white
+model_white &lt;- glm( driver_white 
+              ~ daylight ,
+             data = phoenix_dat,
+             weights = weight,
+             family = binomial() )</code></pre>
+<pre class="r"><code># Updated function: extract estimate, SE, stars
+exclude_fx &lt;- function(model, label) {
+  tidy(model) %&gt;%
+    mutate(
+      formatted = sprintf(&quot;%.3f (%.3f)%s&quot;,
+                          estimate,
+                          std.error,
+                          case_when(
+                            p.value &lt; 0.001 ~ &quot;***&quot;,
+                            p.value &lt; 0.01  ~ &quot;**&quot;,
+                            p.value &lt; 0.05  ~ &quot;*&quot;,
+                            TRUE ~ &quot;&quot;
+                          ))
+    ) %&gt;%
+    select(term, !!label := formatted)
+}
+
+# Get formatted results
+black_terms &lt;- exclude_fx(model_black, &quot;Black Driver&quot;)
+hisp_terms  &lt;- exclude_fx(model_hisp,  &quot;Hispanic Driver&quot;)
+white_terms &lt;- exclude_fx(model_white, &quot;White Driver&quot;)
+
+# Combine into single comparison table
+combined &lt;- full_join(black_terms, hisp_terms, by = &quot;term&quot;) %&gt;%
+  full_join(white_terms, by = &quot;term&quot;) %&gt;%
+  arrange(term)
+
+# Reorder so daylight comes right after the intercept
+combined &lt;- combined %&gt;%
+  mutate(term = factor(term, levels = c(&quot;(Intercept)&quot;, &quot;daylight&quot;, setdiff(term, c(&quot;(Intercept)&quot;, &quot;daylight&quot;))))) %&gt;%
+  arrange(term)
+
+# Display with pander
+pander( combined, caption = &quot;Models Predicting Driver Race/Ethnicity among Traffic Stops in Phoenix, Coefficients with Standard Errors&quot;)</code></pre>
+<table>
+<caption>Models Predicting Driver Race/Ethnicity among Traffic Stops in
+Phoenix, Coefficients with Standard Errors</caption>
+<colgroup>
+<col width="18%" />
+<col width="27%" />
+<col width="27%" />
+<col width="27%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="center">term</th>
+<th align="center">Black Driver</th>
+<th align="center">Hispanic Driver</th>
+<th align="center">White Driver</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="center">(Intercept)</td>
+<td align="center">-1.737 (0.015)***</td>
+<td align="center">0.057 (0.011)***</td>
+<td align="center">-0.682 (0.012)***</td>
+</tr>
+<tr class="even">
+<td align="center">daylight</td>
+<td align="center">-0.114 (0.017)***</td>
+<td align="center">-0.323 (0.012)***</td>
+<td align="center">0.401 (0.013)***</td>
+</tr>
+</tbody>
+</table>
+<p>The table above shows three models: one predicting whether the driver
+is Black, one predicting whether the driver is Hispanic, and one
+predicting whether the driver is White.</p>
+<p>The only predictor in the model is <code>daylight</code>, which is a
+dummy variable for whether it is daytime (=1) or night (=0). The
+negative coefficients predicting whether the driver is Black or Hispanic
+indicates that Black and Hispanic drivers are less likely to be pulled
+over during the day than at night. In contrast, we see that White
+drivers, relative to Black and Hispanic drivers are more likely to be
+pulled over during the day.</p>
+<p><br></p>
+</div>
+<div id="including-additional-predictors" class="section level3">
+<h3>Including Additional Predictors</h3>
+<p>Let’s take a look at the models. Each model includes controls for day
+of the week, the hour of the stop, officer race/ethnicity, officer sex,
+driver sex, driver age, year, and beat (much of these are excluded from
+the table below to help with visualization).</p>
+<pre class="r"><code># model for black
+model_black &lt;- glm( driver_black 
+              ~ daylight 
+              + officer_black + officer_hisp + officer_male 
+              + subj_male + SUBJ_AGE
+              + factor( DAY_OF_WEEK )
+              + stop_hour
+              + factor( YEAR ) + factor( BEAT_NUM ),
+             data = phoenix_dat,
+             weights = weight,
+             family = binomial() )
+
+
+# model for hispanic
+model_hisp &lt;- glm( driver_hisp 
+              ~ daylight 
+              + officer_black + officer_hisp + officer_male 
+              + subj_male + SUBJ_AGE
+              + factor( DAY_OF_WEEK )
+              + stop_hour
+              + factor( YEAR ) + factor( BEAT_NUM ),
+             data = phoenix_dat,
+             weights = weight,
+             family = binomial() )
+
+
+# model for white
+model_white &lt;- glm( driver_white 
+              ~ daylight 
+              + officer_black + officer_hisp + officer_male 
+              + subj_male + SUBJ_AGE
+              + factor( DAY_OF_WEEK )
+              + stop_hour
+              + factor( YEAR ) + factor( BEAT_NUM ),
+             data = phoenix_dat,
+             weights = weight,
+             family = binomial() )</code></pre>
+<pre class="r"><code># Updated function: extract estimate, SE, stars
+exclude_fx &lt;- function(model, label) {
+  tidy(model) %&gt;%
+    filter(!grepl(&quot;^factor\\(YEAR\\)|^factor\\(BEAT_NUM\\)|^factor\\(DAY_OF_WEEK\\)&quot;, term)) %&gt;%
+    mutate(
+      formatted = sprintf(&quot;%.3f (%.3f)%s&quot;,
+                          estimate,
+                          std.error,
+                          case_when(
+                            p.value &lt; 0.001 ~ &quot;***&quot;,
+                            p.value &lt; 0.01  ~ &quot;**&quot;,
+                            p.value &lt; 0.05  ~ &quot;*&quot;,
+                            TRUE ~ &quot;&quot;
+                          ))
+    ) %&gt;%
+    select(term, !!label := formatted)
+}
+
+# Get formatted results
+black_terms &lt;- exclude_fx(model_black, &quot;Black Driver&quot;)
+hisp_terms  &lt;- exclude_fx(model_hisp,  &quot;Hispanic Driver&quot;)
+white_terms &lt;- exclude_fx(model_white, &quot;White Driver&quot;)
+
+# Combine into single comparison table
+combined &lt;- full_join(black_terms, hisp_terms, by = &quot;term&quot;) %&gt;%
+  full_join(white_terms, by = &quot;term&quot;) %&gt;%
+  arrange(term)
+
+# Reorder so daylight comes right after the intercept
+combined &lt;- combined %&gt;%
+  mutate(term = factor(term, levels = c(&quot;(Intercept)&quot;, &quot;daylight&quot;, setdiff(term, c(&quot;(Intercept)&quot;, &quot;daylight&quot;))))) %&gt;%
+  arrange(term)
+
+# Display with pander
+pander( combined, caption = &quot;Models Predicting Driver Race/Ethnicity among Traffic Stops in Phoenix, Coefficients with Standard Errors&quot;)</code></pre>
+<table>
+<caption>Models Predicting Driver Race/Ethnicity among Traffic Stops in
+Phoenix, Coefficients with Standard Errors</caption>
+<colgroup>
+<col width="21%" />
+<col width="26%" />
+<col width="26%" />
+<col width="26%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="center">term</th>
+<th align="center">Black Driver</th>
+<th align="center">Hispanic Driver</th>
+<th align="center">White Driver</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="center">(Intercept)</td>
+<td align="center">-2.362 (0.098)***</td>
+<td align="center">-0.224 (0.066)***</td>
+<td align="center">-0.374 (0.063)***</td>
+</tr>
+<tr class="even">
+<td align="center">daylight</td>
+<td align="center">-0.158 (0.024)***</td>
+<td align="center">-0.141 (0.018)***</td>
+<td align="center">0.262 (0.020)***</td>
+</tr>
+<tr class="odd">
+<td align="center">SUBJ_AGE</td>
+<td align="center">-0.003 (0.000)***</td>
+<td align="center">-0.025 (0.000)***</td>
+<td align="center">0.027 (0.000)***</td>
+</tr>
+<tr class="even">
+<td align="center">officer_black</td>
+<td align="center">-0.033 (0.028)</td>
+<td align="center">0.057 (0.022)**</td>
+<td align="center">-0.033 (0.023)</td>
+</tr>
+<tr class="odd">
+<td align="center">officer_hisp</td>
+<td align="center">-0.026 (0.018)</td>
+<td align="center">0.042 (0.013)**</td>
+<td align="center">-0.028 (0.014)*</td>
+</tr>
+<tr class="even">
+<td align="center">officer_male</td>
+<td align="center">0.053 (0.023)*</td>
+<td align="center">-0.077 (0.017)***</td>
+<td align="center">0.048 (0.018)**</td>
+</tr>
+<tr class="odd">
+<td align="center">stop_hour</td>
+<td align="center">-0.009 (0.002)***</td>
+<td align="center">-0.007 (0.001)***</td>
+<td align="center">0.013 (0.001)***</td>
+</tr>
+<tr class="even">
+<td align="center">subj_male</td>
+<td align="center">-0.040 (0.015)**</td>
+<td align="center">0.157 (0.011)***</td>
+<td align="center">-0.147 (0.011)***</td>
+</tr>
+</tbody>
+</table>
+<p><br></p>
+<p>This table</p>
+<p><br><br></p>
+<hr />
+<p align="center">
+<a href="https://jacobtnyoung.github.io/OpenCrimPhx/">Back to Open
+Criminology Phoenix page</a>
+</p>
+<p><br></p>
+<p><strong><em>Please</em></strong> report any needed corrections to the
+<a
+href="https://github.com/jacobtnyoung/OpenCrimPhx/issues/new">Issues</a>
+page. Thanks!</p>
+<p><br><br></p>
+<div id="last-updated-22-april-2025" class="section level6">
+<h6><strong><em>Last updated 22 April, 2025</em></strong></h6>
+</div>
+</div>
+</div>
+
+
+
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+<script>
+$(document).ready(function () {
+  window.initializeCodeFolding("hide" === "show");
+});
+</script>
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
