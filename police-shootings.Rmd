@@ -3,7 +3,9 @@ title: "Are officer involved shootings increasing in Phoenix? (and other questio
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
   html_document:
-        theme: simplex 
+        theme: simplex
+        code_folding: hide
+        self-contained: true
 ---
 
 ```{r setup, include=FALSE}

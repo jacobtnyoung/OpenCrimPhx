@@ -16,7 +16,6 @@ This page focuses on analyses that pertain to understanding policing in Phoenix:
 
   * [Do police officers in Phoenix show racial bias in traffic stops?](https://jacobtnyoung.github.io/OpenCrimPhx/police-vod-traffic.html)
 
-
 </div>
 
 <br>

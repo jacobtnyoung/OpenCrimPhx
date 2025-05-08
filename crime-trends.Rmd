@@ -5,6 +5,7 @@ output:
   html_document:
         theme: simplex 
         code_folding: hide
+        self-contained: true
 ---
 
 ```{r setup, include=FALSE}
