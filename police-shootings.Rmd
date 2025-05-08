@@ -22,34 +22,50 @@ rm( list = ls() )
 
 <br>
 
-```{r, echo = FALSE, eval = TRUE}
-# get the shooting data from the data folder
-# "https://www.phoenixopendata.com/dataset/ois/resource/f4df6466-e4d5-4452-ad1b-5fb7f3fa19df"
-
-library( here )
-
-loc <- "data/ois_ois-individual-summary_oisindividual.csv"
-shooting.data <- read.csv( here( loc ), as.is = TRUE, header = TRUE )
-#shooting.data <- na.omit( shooting.data )
-
-library( scales )
-n.cases <- dim( shooting.data )[1]
-
-library( dplyr )
-library( tidyr )
-library( ggplot2 )
-library( forecast )
-
-
-```  
-
 The behavior of police officers has been a major event in 2020. So, we might wonder whether officer involved shootings have become more common (or rare?) in Phoenix over the last few years. We can try and answer this question by examining the [officer involved shootings](https://www.phoenixopendata.com/dataset/ois) data from the [City of Phoenix](https://www.phoenix.gov/) open [data](https://www.phoenixopendata.com/) portal. Let's get to it!
+
+<br><br>
+
+## Setup and Loading the Data
 
 <br>
 
-###  {.tabset}
+### Preparing the environment
 
-#### About the Data {.tabset}
+First we need to clear the workspace and load the libraries we are going to use.
+
+<br>
+
+```{r}
+
+# clear workspace
+rm( list = ls() )
+
+
+# load libraries
+library( dplyr )        # used for wrangling the data
+library( tidyr )        # used for wrangling the data
+library( openxlsx )     # for opening an excel file
+library( here )         # for referencing the local directory
+library( scales )       # this helps with formatting
+library( ggplot2 )      # for plotting
+library( forecast )     # for time-series objects
+library( viridis )  # for some coloring used in the plots
+
+
+# pull in the csv file
+loc <- "data/ois_ois-individual-summary_oisindividual.csv"
+shooting_data <- read.csv( here( loc ), as.is = TRUE, header = TRUE )
+
+
+# define the number of cases
+n.cases <- dim( shooting_data )[1]
+
+```  
+
+<br>
+
+### About the Data
 
 The [officer involved shootings](https://www.phoenixopendata.com/dataset/ois) page lists several data sets describing the incidents. Here, we will work with the individual summary [file](https://www.phoenixopendata.com/dataset/754b1156-a48f-4d1b-b17a-53bd96d5b2be/resource/f4df6466-e4d5-4452-ad1b-5fb7f3fa19df/download/oisindividual.csv). This file is used because it is just the count for individual incidents and it has a flag for whether the incident involved a fatality.   
 
@@ -69,46 +85,24 @@ The dataset contains information about:
   
 <br>
 
-
-#### Getting the data (code)  
-
-```{r, echo = TRUE, eval = FALSE}
-
-# set the url where the data are located.
-url <- "https://www.phoenixopendata.com/dataset/754b1156-a48f-4d1b-b17a-53bd96d5b2be/resource/f4df6466-e4d5-4452-ad1b-5fb7f3fa19df/download/oisindividual.csv"
-
-# pull in the csv file.
-shooting.data <- read.csv( url, as.is = TRUE, header = TRUE )
-
-# take a look at the data.
-head( shooting.data )  
-
-``` 
-
-
-#### Preprocessing the data (code)  
+### Preprocessing the data (code)  
 
 Now that the data are in the workspace, let's clean up the dates using the `strptime()` and `format()` functions here.
 
-```{r, echo = TRUE, eval = TRUE}
+```{r}
 
-# The date and time variable is a character string.
-head( shooting.data$OIS_DATE )
-is.character( shooting.data$OIS_DATE )
+# Since the month variable is in an unusual format, we need to convert 
+# the date string to a date format code. Then pull off the month
+date.vec <- strptime( shooting_data$OIS_DATE, format="%m/%d/%y" )
 
-# Since the month variable is in an unusual format, we need to convert the date string to a date format code. Then pull off the month.
-date.vec <- strptime( shooting.data$OIS_DATE, format="%m/%d/%y" )
-
-# Now, let's use the format() function to create the month.
-shooting.data$month  <- format( date.vec, format="%B" )
+# now, let's use the format() function to create the month
+shooting_data$month  <- format( date.vec, format="%B" )
 
 ```
 
 <br>
 
-###  {.tabset}
-
-#### Monthly Incidents
+## Monthly Incidents
 
 <br>
 
@@ -116,11 +110,11 @@ As a first step, let's take a look at the monthly occurrence of officer involved
 
 <br>
 
-```{r, echo = FALSE, eval = TRUE}
+```{r}
 
 # Create an object that is monthly counts and sorted by year. 
-shootings.by.month <- 
-  shooting.data %>% 
+shootings_by_month <- 
+  shooting_data %>% 
   select( OIS_YEAR, month ) %>%   
   group_by( OIS_YEAR, month ) %>% 
   summarize( counts = n() ) %>% 
@@ -129,27 +123,29 @@ shootings.by.month <-
   select( !month )
 
 # Replace missing values with zero.
-shootings.by.month[ is.na( shootings.by.month ) == TRUE ] <- 0
+shootings_by_month[ is.na( shootings_by_month ) == TRUE ] <- 0
 
 # Use the ts() function to create a time series object.
-monthly.shootings.by.year <- ts(
-  matrix( as.matrix( shootings.by.month ), ncol = 1 ), 
+monthly_shootings_by_year <- ts(
+  matrix( as.matrix( shootings_by_month ), ncol = 1 ), 
   start=c( 2017, 1 ), 
-  end=c( as.numeric( tail( names( shootings.by.month ), n=1 ) ), 12 ), 
+  end=c( as.numeric( tail( names( shootings_by_month ), n=1 ) ), 12 ), 
   frequency=12
 )
 
-# Finally, let's take a look using ggseasonplot().
-library( ggplot2 )
-library( forecast )
-
-# Now, plot it.
-monthly.shootings.by.year %>% 
+# render the plot
+monthly_shootings_by_year %>%
   ggseasonplot(
-    year.labels=FALSE,
-    main = "Plot of Monthly Officer Involved Shootings by Years for Phoenix" ) + 
-  scale_y_continuous(label = comma) +
-  theme_gray() 
+    year.labels = FALSE,
+    continuous = FALSE,
+    col = viridis( n = dim( shootings_by_month )[2], option = "rocket" ) ) +
+  scale_y_continuous( labels = comma ) +
+  geom_line( size = 1.5, alpha = 0.7 ) +
+  geom_point( size = 2, shape = 21, fill = "white", color = "black" ) + 
+  ggtitle(
+    "Monthly Officer Involved Shootings by Years in Phoenix, AZ", 
+    subtitle = "Observed seasonal patterns across years" ) +
+  theme_minimal()
 
 ```
 
@@ -159,69 +155,21 @@ The plot shows several interesting patterns:
 
   + First, there are multiple months throughout the years in which there are no shootings.    
   
-  + Second, March, May, and August of 2018, as well as October of 2020 both stick out as unusual in that there were `r max( shootings.by.month )` in each of these months. 
+  + Second, March, May, and August of 2018, as well as October of 2020 both stick out as unusual in that there were `r max( shootings_by_month )` in each of these months. 
   
-  + Third, 2020 is not as an unusual as I had expected. Beginning in August, there is a consistent increase until December. There were `r sum( shootings.by.month$"2020" )` officer involved shootings in 2020. For 2017, 2018, and 2019, there were `r sum( shootings.by.month$"2017" )`, `r sum( shootings.by.month$"2019" )`, and `r sum( shootings.by.month$"2019" )` officer involved shootings, respectively. So, for 2020 there were more, but not substantially more officer involved shootings.  
+  + Third, 2020 is not as an unusual as I had expected. Beginning in August, there is a consistent increase until December. There were `r sum( shootings_by_month$"2020" )` officer involved shootings in 2020. For 2017, 2018, and 2019, there were `r sum( shootings_by_month$"2017" )`, `r sum( shootings_by_month$"2019" )`, and `r sum( shootings_by_month$"2019" )` officer involved shootings, respectively. So, for 2020 there were more, but not substantially more officer involved shootings.  
 
-
-#### (code)
-
-<br>
-
-```{r, echo = TRUE, eval = FALSE}
-
-# Create an object that is monthly counts and sorted by year. 
-shootings.by.month <- 
-  shooting.data %>% 
-  select( OIS_YEAR, month ) %>%   
-  group_by( OIS_YEAR, month ) %>% 
-  summarize( counts = n() ) %>% 
-  spread( OIS_YEAR, counts ) %>% 
-  arrange( match( month, month.name ) ) %>% 
-  select( !month )
-
-# Replace missing values with zero.
-shootings.by.month[ is.na( shootings.by.month ) == TRUE ] <- 0
-
-# Use the ts() function to create a time series object.
-monthly.shootings.by.year <- ts(
-  matrix( as.matrix( shootings.by.month ), ncol = 1 ), 
-  start=c( 2017, 1 ), 
-  end=c( as.numeric( tail( names( shootings.by.month ), n=1 ) ), 12 ), 
-  frequency=12
-)
-
-# Finally, let's take a look using ggseasonplot().
-library( ggplot2 )
-library( forecast )
-
-# Now, plot it.
-monthly.shootings.by.year %>% 
-  ggseasonplot(
-    year.labels=FALSE,
-    main = "Plot of Monthly Officer Involved Shootings by Years for Phoenix" ) + 
-  scale_y_continuous(label = comma) +
-  theme_gray() 
-
-```
-
-<br>
-
-###  {.tabset}
-
-#### Yearly Incidents
+## Yearly Incidents
 
 <br>
 
 As a second step, let's take a look at the yearly occurrence of officer involved shootings. This will take the data shown above by month and condense it by year. We will also plot the linear trend line. The plot shows the yearly count of officer involved shootings from January, 2017 to `r format( Sys.time(), '%B, %Y' )`. 
 
-<br>
-
-```{r, echo = FALSE, eval = TRUE}
+```{r}
 
 # Create an object that is yearly counts and sorted by year. 
-shootings.by.year <- 
-  shooting.data %>% 
+shootings_by_year <- 
+  shooting_data %>% 
   select( OIS_YEAR ) %>%   
   group_by( OIS_YEAR ) %>% 
   summarize( counts = n() ) 
@@ -230,13 +178,13 @@ shootings.by.year <-
 library( ggplot2 )
 
 # Now, plot it.
-shootings.by.year %>% 
+shootings_by_year %>% 
   ggplot( aes( OIS_YEAR, counts ) ) +
   geom_line( color = "black" ) + 
   geom_point( alpha = 1/5, color = "black" ) +
   labs( x = "", y = "Incidents per Year" ) + 
   ggtitle( "Yearly Counts of Officer Involved Shootings in Phoenix, AZ" ) +
-  geom_smooth( method=lm, se=FALSE, col="lightblue", size = 1 ) +
+  geom_smooth( method=lm, se=FALSE, col="#20c5e6", size = 1 ) +
   scale_y_continuous(label = comma) +
   theme_minimal() 
 
@@ -248,43 +196,7 @@ The plot shows a general tend toward a decrease in officer involved shootings. B
 
 <br>
 
-
-#### (code)
-
-<br>
-
-```{r, echo = TRUE, eval = FALSE}
-
-# Create an object that is yearly counts and sorted by year. 
-shootings.by.year <- 
-  shooting.data %>% 
-  select( OIS_YEAR ) %>%   
-  group_by( OIS_YEAR ) %>% 
-  summarize( counts = n() ) 
-
-# We will use a simple line/point plot.
-library( ggplot2 )
-
-# Now, plot it.
-shootings.by.year %>% 
-  ggplot( aes( OIS_YEAR, counts ) ) +
-  geom_line( color = "black" ) + 
-  geom_point( alpha = 1/5, color = "black" ) +
-  labs( x = "", y = "Incidents per Year" ) + 
-  ggtitle( "Yearly Counts of Officer Involved Shootings in Phoenix, AZ" ) +
-  geom_smooth( method=lm, se=FALSE, col="lightblue", size = 1 ) +
-  scale_y_continuous(label = comma) +
-  theme_minimal() 
-
-```
-
-<br>
-
-<br>
-
-###  {.tabset}
-
-#### Suspect Characteristics
+## Suspect Characteristics
 
 <br>
 
@@ -292,29 +204,29 @@ Additionally, we can examine the characteristics of the individuals who are shot
 
 There are a few interesting features of the data:  
 
-  + Of the `r sum( shootings.by.month)` shootings, `r table( shooting.data$FATALITY_FLG)[1]` were fatal, a proportion of `r round( table( shooting.data$FATALITY_FLG)[1] / sum( shootings.by.month), 2 )`.
+  + Of the `r sum( shootings_by_month)` shootings, `r table( shooting_data$FATALITY_FLG)[1]` were fatal, a proportion of `r round( table( shooting_data$FATALITY_FLG)[1] / sum( shootings_by_month), 2 )`.
   
 The plot below shows the frequency distribution (i.e. counts) of shootings by year broken-out by whether the shooting was fatal or non-fatal. 
 
 <br>
 
-```{r, echo = FALSE, eval = TRUE}
+```{r}
 
 # Create a plot for fatal vs. non-fatal shootings by year.
-f.nf.shootings.by.year <- 
-   shooting.data %>% 
+f.nf.shootings_by_year <- 
+   shooting_data %>% 
    select( OIS_YEAR, FATALITY_FLG ) %>%   
    group_by( OIS_YEAR, FATALITY_FLG ) %>% 
    summarize( counts = n() )
 
-f.nf.shootings.by.year %>% 
+f.nf.shootings_by_year %>% 
    ggplot( aes( OIS_YEAR, counts ) ) +
    facet_wrap( ~ FATALITY_FLG ) +
    geom_line( color = "black" ) + 
    geom_point( alpha = 1/5, color = "black" ) +
    labs( x = "", y = "Incidents per Year" ) + 
    ggtitle( "Yearly Counts of Officer Involved Shootings in Phoenix, AZ by Fatal/Non-Fatal" ) +
-   geom_smooth( method=lm, se=FALSE, col="lightblue", size = 1 ) +
+   geom_smooth( method=lm, se=FALSE, col="#20c5e6", size = 1 ) +
    scale_y_continuous( label = comma ) +
    theme_minimal() 
 
@@ -326,32 +238,32 @@ An important question is whether shootings have become more (or less) fatal over
 
 <br>
 
-```{r, echo = FALSE, eval = TRUE}
+```{r}
 
 # Create a plot for the ratio of fatal shootings to all shootings.
-fatal.shootings.by.year <- 
-  shooting.data %>% 
+fatal.shootings_by_year <- 
+  shooting_data %>% 
   select( OIS_YEAR, FATALITY_FLG ) %>% 
   filter( FATALITY_FLG == "Fatal" ) %>% 
   group_by( OIS_YEAR ) %>% 
   summarize( f.counts = n() ) %>% 
   group_by( OIS_YEAR ) 
 
-shootings.by.year <- 
-  shooting.data %>% 
+shootings_by_year <- 
+  shooting_data %>% 
   select( OIS_YEAR ) %>%   
   group_by( OIS_YEAR ) %>% 
   summarize( counts = n() ) 
 
-fatal.shootings.by.year$ratio <- fatal.shootings.by.year$f.counts / shootings.by.year$counts
+fatal.shootings_by_year$ratio <- fatal.shootings_by_year$f.counts / shootings_by_year$counts
 
-fatal.shootings.by.year %>% 
+fatal.shootings_by_year %>% 
   ggplot( aes( OIS_YEAR, ratio ) ) +
   geom_line( color = "black" ) + 
   geom_point( alpha = 1/5, color = "black" ) +
   labs( x = "", y = "Ratio of Fatal Incidents per Year" ) + 
   ggtitle( "Yearly Ratio of Fatal Officer Involved Shootings in Phoenix, AZ" ) +
-  geom_smooth( method=lm, se=FALSE, col="lightblue", size = 1 ) +
+  geom_smooth( method=lm, se=FALSE, col="#20c5e6", size = 1 ) +
   scale_y_continuous( label = comma ) +
   theme_minimal() 
 
@@ -365,7 +277,7 @@ Over time, there has been a decline in the number of officer involved shootings 
 
 There are more interesting features of the data:  
 
-  + Whites account for a minority of cases, with a proportion of `r round( ( table( shooting.data$SIMPLE_SUBJ_RE_GRP[shooting.data$SIMPLE_SUBJ_RE_GRP == "White"] ) / sum( shootings.by.month ) ), 2 )`. 
+  + Whites account for a minority of cases, with a proportion of `r round( ( table( shooting_data$SIMPLE_SUBJ_RE_GRP[shooting_data$SIMPLE_SUBJ_RE_GRP == "White"] ) / sum( shootings_by_month ) ), 2 )`. 
 
 <br>
 
@@ -374,11 +286,11 @@ The plot below shows the frequency distribution (i.e. counts) of shootings by ag
 <br>
 
 
-```{r, echo = FALSE, eval = TRUE}
+```{r}
 
 # Create a plot with race, age, and the outcome.
 ggplot(
-  shooting.data %>% 
+  shooting_data %>% 
   select( SIMPLE_SUBJ_RE_GRP, SP_AGE_GROUP, FATALITY_FLG ) %>% 
   mutate( sp_wnw = ifelse( SIMPLE_SUBJ_RE_GRP != "White", "Non-White", "White" ) ) %>%
   mutate( SP_AGE_GROUP = replace( SP_AGE_GROUP, SP_AGE_GROUP == 120, 12 ) ) %>% 
@@ -395,77 +307,6 @@ ggplot(
 ```
 
 <br>
-
-
-<br>
-
-#### (code)
-
-<br>
-
-```{r, echo = TRUE, eval = FALSE}
-
-# Create a plot for fatal vs. non-fatal shootings by year.
-ggplot(
-  shooting.data %>% 
-  select( SIMPLE_SUBJ_RE_GRP, SP_AGE_GROUP, FATALITY_FLG ) %>% 
-  mutate( sp_wnw = ifelse( SIMPLE_SUBJ_RE_GRP != "White", "Non-White", "White" ) ) %>%
-  mutate( SP_AGE_GROUP = replace( SP_AGE_GROUP, SP_AGE_GROUP == 120, 12 ) ) %>% 
-  group_by( sp_wnw, SP_AGE_GROUP, FATALITY_FLG ) %>% 
-  summarize( counts = n() ) ) +
- geom_col( aes( SP_AGE_GROUP, counts, fill = FATALITY_FLG ) ) +
- facet_wrap( ~sp_wnw ) +
- labs( x = "Suspect Age" ) +
- labs( fill = "Outcome of Shooting" ) +
- scale_fill_manual(values = c("#ca0222", "#02677b")) +
- labs( title = "Plot of Suspect Age, Suspect Race, and Outcome for Officer Involved Shootings in Phoenix" ) +
- theme_gray() 
-
-# Create a plot for the ratio of fatal shootings to all shootings.
-fatal.shootings.by.year <- 
-  shooting.data %>% 
-  select( OIS_YEAR, FATALITY_FLG ) %>% 
-  filter( FATALITY_FLG == "Fatal" ) %>% 
-  group_by( OIS_YEAR ) %>% 
-  summarize( f.counts = n() ) %>% 
-  group_by( OIS_YEAR ) 
-
-shootings.by.year <- 
-  shooting.data %>% 
-  select( OIS_YEAR ) %>%   
-  group_by( OIS_YEAR ) %>% 
-  summarize( counts = n() ) 
-
-fatal.shootings.by.year$ratio <- fatal.shootings.by.year$f.counts / shootings.by.year$counts
-
-fatal.shootings.by.year %>% 
-  ggplot( aes( OIS_YEAR, ratio ) ) +
-  geom_line( color = "black" ) + 
-  geom_point( alpha = 1/5, color = "black" ) +
-  labs( x = "", y = "Incidents per Year" ) + 
-  ggtitle( "Yearly Counts of Officer Involved Shootings in Phoenix, AZ" ) +
-  geom_smooth( method=lm, se=FALSE, col="lightblue", size = 1 ) +
-  scale_y_continuous(label = comma) +
-  theme_minimal() 
-
-# Create a plot with race, age, and the outcome.
-ggplot(
-  shooting.data %>% 
-  select( SIMPLE_SUBJ_RE_GRP, SP_AGE_GROUP, FATALITY_FLG ) %>% 
-  mutate( sp_wnw = ifelse( SIMPLE_SUBJ_RE_GRP != "White", "Non-White", "White" ) ) %>%
-  mutate( SP_AGE_GROUP = replace( SP_AGE_GROUP, SP_AGE_GROUP == 120, 12 ) ) %>% 
-  group_by( sp_wnw, SP_AGE_GROUP, FATALITY_FLG ) %>% 
-  summarize( counts = n() ) ) +
- geom_col( aes( SP_AGE_GROUP, counts, fill = FATALITY_FLG ) ) +
- facet_wrap( ~sp_wnw ) +
- labs( x = "Suspect Age" ) +
- labs( fill = "Outcome of Shooting" ) +
- scale_fill_manual(values = c("#ca0222", "#02677b")) +
- labs( title = "Plot of Suspect Age, Suspect Race, and Outcome for Officer Involved Shootings in Phoenix" ) +
- theme_gray() 
-
-
-```
 
 ###
 
