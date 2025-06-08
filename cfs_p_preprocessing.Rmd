@@ -19,14 +19,9 @@ knitr::opts_chunk$set( echo = TRUE,
 
 <br>
 
-The [Calls for Service](https://www.phoenixopendata.com/dataset/calls-for-service) 
+The [Calls for Police Service](https://www.phoenixopendata.com/dataset/calls-for-service) file from the [data portal](https://www.phoenixopendata.com/) contains all citizen-generated dispatched calls for police service. Officer self-initiated calls and non dispatched calls such as calls for general information or calls that are transferred to other departments such as FIRE for response are not included. The Calls for [Service to Fire]() are available at: **INSERT URL FOR FIRE CALLS FOR SERVICE**. The city updates the [file]("https://www.phoenixopendata.com/dataset/64a60154-3b2d-4583-8fb5-6d5e1b469c28/resource/1d536ee6-7ffb-49c3-bffe-5cdd98a3c97e/download/calls-for-service_calls-for-service_callsforservice.csv") at 11am every day and it contains data beginning November 2015 up to 7 days before the posting date. 
 
-HERE WITH UPDATING
-
-
-file from the [data portal](https://www.phoenixopendata.com/) contains incidents reported to the Phoenix Police Department. The city updates the [file]("https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crime-data_crime-data_crimestat.csv") at 11am every day and it contains data beginning November 2015 up to 7 days before the posting date. 
-
-Before we do anything with it, we need to do some pre-processing. Mainly, cleaning up variables, creating basic objects, and incorporating population data to calculate rates.
+As we did with the crime data (**NEED URL TO CRIME PREPROCESSING HERE**), we need to do some pre-processing. Mainly, cleaning up variables, creating basic objects, and incorporating population data to calculate rates.
 
 <br><br>
 
@@ -61,40 +56,55 @@ library( zoo )          # to help with interpolation
 
 ### Loading the data
 
-Next we want to load the data and do some cleaning. The data can be called directly from the website link, [here]("https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crime-data_crime-data_crimestat.csv"). 
+Next we want to load the data and do some cleaning. The data can be called directly from the website link, [here]("https://www.phoenixopendata.com/dataset/64a60154-3b2d-4583-8fb5-6d5e1b469c28/resource/1d536ee6-7ffb-49c3-bffe-5cdd98a3c97e/download/calls-for-service_calls-for-service_callsforservice.csv"). 
 
 <br>
 
 ```{r, results="hide"}
 
 # get the data
-url <- "https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crime-data_crime-data_crimestat.csv"
+url <- "https://www.phoenixopendata.com/dataset/64a60154-3b2d-4583-8fb5-6d5e1b469c28/resource/1d536ee6-7ffb-49c3-bffe-5cdd98a3c97e/download/calls-for-service_calls-for-service_callsforservice.csv"
+
+url <- "https://www.phoenixopendata.com/dataset/64a60154-3b2d-4583-8fb5-6d5e1b469c28/resource/d53e8f3f-2ce5-4e58-b03d-fe3721c9354e/download/calls-for-service2016-calls-for-servicecallsforsrvc2016.csv"
 
 # assign the data to an object
-crimeData <- read.csv( url, as.is = TRUE, header = TRUE )
+cfps_data <- read.csv( url, as.is = TRUE, header = TRUE )
 
 # remove cases that are missing data
-crimeData <- na.omit( crimeData )
+cfps_data <- na.omit( cfps_data )
 
 # remove duplicate ids
-duplicateIds <- crimeData$INC.NUMBER[ duplicated( crimeData$INC.NUMBER )]
-crimeData <- crimeData[ !crimeData$INC.NUMBER %in% duplicateIds, ]
-rm( duplicateIds )
+duplicate_ids <- cfps_data$INCIDENT_NUM[ duplicated( cfps_data$INCIDENT_NUM )]
+cfps_data <- cfps_data[ !cfps_data$INCIDENT_NUM %in% duplicate_ids, ]
+rm( duplicate_ids )
+
+# need to pull off the date off the call received variable
+
+
+date_vec <- sub( "\\s+.*$", "", cfps_data$CALL_RECEIVED )
+date_vec <- strptime( date_vec, format="%m/%d/%Y %H:%M" )
 
 # clean up the dates
-date.vec <- strptime( crimeData$OCCURRED.ON, format="%m/%d/%Y %H:%M" )
-crimeData$year   <- format( date.vec, format="%Y" )
-crimeData$month  <- format( date.vec, format="%B" )
-crimeData$day365 <- format( date.vec, format="%j" )
-crimeData$week   <- format( date.vec, format="%V" )
+date_vec <- strptime( cfps_data$CALL_RECEIVED, format="%m/%d/%Y %H:%M" )
+
+cfps_data$year   <- format( date_vec, format="%Y" )
+cfps_data$month  <- format( date_vec, format="%B" )
+cfps_data$day365 <- format( date_vec, format="%j" )
+cfps_data$week   <- format( date_vec, format="%V" )
 
 # now we want to clean up the times
-crimeData$hour   <- format(date.vec, format = "%H") %>% as.numeric()
+cfps_data$hour   <- format( date_vec, format = "%H" ) %>% as.numeric()
+
+
+!!! check the disposition codes for this
+
+!!!HERE: Need to think about how you want to recode these
+! the 
 
 # clean up the variable classifying the cases
-crimeData <- 
-  crimeData %>% 
-  mutate( crime.type = case_when( 
+cfps_data <- 
+  cfps_data %>% 
+  mutate( call_type = case_when( 
     UCR.CRIME.CATEGORY == "AGGRAVATED ASSAULT" ~ "Assault",
     UCR.CRIME.CATEGORY == "ARSON" ~ "Arson",
     UCR.CRIME.CATEGORY == "BURGLARY" ~ "Burglary",
