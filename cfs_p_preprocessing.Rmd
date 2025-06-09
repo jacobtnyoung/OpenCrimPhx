@@ -56,33 +56,22 @@ library( zoo )          # to help with interpolation
 
 ### Loading the data
 
-Next we want to load the data and do some cleaning. The data can be called directly from the website link, [here]("https://www.phoenixopendata.com/dataset/64a60154-3b2d-4583-8fb5-6d5e1b469c28/resource/1d536ee6-7ffb-49c3-bffe-5cdd98a3c97e/download/calls-for-service_calls-for-service_callsforservice.csv"). 
+Next we want to load the data and do some cleaning. The data can be called directly from the website link, [here]("https://www.phoenixopendata.com/dataset/64a60154-3b2d-4583-8fb5-6d5e1b469c28/resource/1d536ee6-7ffb-49c3-bffe-5cdd98a3c97e/download/calls-for-service_calls-for-service_callsforservice.csv"). If you take a look through the page, you will see that there is a file for all years combined, as well as files for each separate years. 
 
 <br>
 
 ```{r, results="hide"}
 
-# get the data
+# define the url for the full file
 url <- "https://www.phoenixopendata.com/dataset/64a60154-3b2d-4583-8fb5-6d5e1b469c28/resource/1d536ee6-7ffb-49c3-bffe-5cdd98a3c97e/download/calls-for-service_calls-for-service_callsforservice.csv"
-
-url <- "https://www.phoenixopendata.com/dataset/64a60154-3b2d-4583-8fb5-6d5e1b469c28/resource/d53e8f3f-2ce5-4e58-b03d-fe3721c9354e/download/calls-for-service2016-calls-for-servicecallsforsrvc2016.csv"
 
 # assign the data to an object
 cfps_data <- read.csv( url, as.is = TRUE, header = TRUE )
-
-# remove cases that are missing data
-cfps_data <- na.omit( cfps_data )
 
 # remove duplicate ids
 duplicate_ids <- cfps_data$INCIDENT_NUM[ duplicated( cfps_data$INCIDENT_NUM )]
 cfps_data <- cfps_data[ !cfps_data$INCIDENT_NUM %in% duplicate_ids, ]
 rm( duplicate_ids )
-
-# need to pull off the date off the call received variable
-
-
-date_vec <- sub( "\\s+.*$", "", cfps_data$CALL_RECEIVED )
-date_vec <- strptime( date_vec, format="%m/%d/%Y %H:%M" )
 
 # clean up the dates
 date_vec <- strptime( cfps_data$CALL_RECEIVED, format="%m/%d/%Y %H:%M" )
@@ -96,10 +85,16 @@ cfps_data$week   <- format( date_vec, format="%V" )
 cfps_data$hour   <- format( date_vec, format = "%H" ) %>% as.numeric()
 
 
-!!! check the disposition codes for this
+HERE:
+  figure out what the DISP_CODE variable means
+  If you look at the DISPOSITION variable, you will see that there is a lot of
+  situations (like half) where there is no action.
+  For this same variable there are a lot of other 
 
-!!!HERE: Need to think about how you want to recode these
-! the 
+I think this is where you start because about half of these are situation
+where no
+
+
 
 # clean up the variable classifying the cases
 cfps_data <- 
