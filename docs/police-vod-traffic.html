@@ -280,7 +280,7 @@ $(document).ready(function () {
 
 <h1 class="title toc-ignore">Examining Racial Bias in Police Stops in
 Phoenix</h1>
-<h4 class="date">11 July, 2025</h4>
+<h4 class="date">13 August, 2025</h4>
 
 </div>
 
@@ -322,7 +322,7 @@ going to use.</p>
 <h3>Load and Prepare the Data</h3>
 <pre class="r"><code>loc &lt;- &quot;data/citations_traffic-citations-details_citationdetail.csv&quot;
 phoenix_dat &lt;- read.csv( here( loc ), as.is = TRUE, header = TRUE )</code></pre>
-<p>There are 323336 traffic incidents from 2018 to 2025.</p>
+<p>There are 337956 traffic incidents from 2018 to 2025.</p>
 <p><br></p>
 </div>
 <div id="extract-and-process-time-variables" class="section level3">
@@ -389,11 +389,11 @@ African American” category.</p></li>
 <code>SIMPE_SUBJ_RE_GRP</code>, but pertains to the officer, not the
 citizen.</p></li>
 </ul>
-<p>For these variables there are 573 in which the citizen’s
-race/ethnicity is listed as <em>Unknown</em> and 10486 listed as
+<p>For these variables there are 1109 in which the citizen’s
+race/ethnicity is listed as <em>Unknown</em> and 10884 listed as
 <em>Other</em>. These are removed from the analysis. <em>Unknown</em>
 and <em>Other</em> represent 0 and 3, percent of all cases,
-respectively. Also, there are 11893 in which the officer’s
+respectively. Also, there are 12198 in which the officer’s
 race/ethnicity is listed as <em>Other</em>.</p>
 <p>These incidents are coded as missing (i.e. <code>NA</code>) and
 removed from the analysis.</p>
@@ -474,21 +474,21 @@ pander( race_pct_table, caption = &quot;Percentage of Stops by Race and Light Co
 <tbody>
 <tr class="odd">
 <td align="center">All Stops</td>
-<td align="center">13.82</td>
-<td align="center">44.28</td>
-<td align="center">41.9</td>
+<td align="center">13.85</td>
+<td align="center">44.15</td>
+<td align="center">42.01</td>
 </tr>
 <tr class="even">
 <td align="center">Daylight</td>
-<td align="center">13.56</td>
-<td align="center">43.05</td>
-<td align="center">43.39</td>
+<td align="center">13.59</td>
+<td align="center">42.91</td>
+<td align="center">43.5</td>
 </tr>
 <tr class="odd">
 <td align="center">Darkness</td>
-<td align="center">15.22</td>
-<td align="center">50.94</td>
-<td align="center">33.84</td>
+<td align="center">15.25</td>
+<td align="center">51.02</td>
+<td align="center">33.73</td>
 </tr>
 </tbody>
 </table>
@@ -497,9 +497,9 @@ pander( race_pct_table, caption = &quot;Percentage of Stops by Race and Light Co
 <li><p>The <em>All Stops</em> row represents the percentage of all stops
 that the specific racial/ethnic group represents.</p>
 <ul>
-<li>Citizens who were coded as <strong>Black</strong> made up 13.82
+<li>Citizens who were coded as <strong>Black</strong> made up 13.85
 percent of all traffic stops, whereas those coded as
-<strong>Hispanic</strong> made up 44.28 percent.</li>
+<strong>Hispanic</strong> made up 44.15 percent.</li>
 </ul></li>
 </ul>
 <p><br></p>
@@ -511,14 +511,14 @@ represents the percentage of stops that were coded as
 gives some indication of whether there are differences in citations by
 day versus night.</p>
 <ul>
-<li><p>Citizens who were coded as <strong>Black</strong> represent 13.56
+<li><p>Citizens who were coded as <strong>Black</strong> represent 13.59
 percent of traffic stops during the day whereas this same group
-represents 15.22 percent of traffic stops at night. In other words,
+represents 15.25 percent of traffic stops at night. In other words,
 citizens who are <strong>Black</strong> are less likely to be pulled
 over during the day, than at night.</p></li>
 <li><p>Citizens who were coded as <strong>Hispanic</strong> represent
-43.05 percent of traffic stops during the day whereas this same group
-represents 50.94 percent of traffic stops at night. In other words,
+42.91 percent of traffic stops during the day whereas this same group
+represents 51.02 percent of traffic stops at night. In other words,
 citizens who are <strong>Hispanic</strong> are less likely to be pulled
 over during the day, than at night.</p></li>
 </ul></li>
@@ -635,15 +635,15 @@ Phoenix, Coefficients with Standard Errors</caption>
 <tbody>
 <tr class="odd">
 <td align="center">(Intercept)</td>
-<td align="center">-1.735 (0.015)***</td>
-<td align="center">0.059 (0.011)***</td>
-<td align="center">-0.684 (0.011)***</td>
+<td align="center">-1.733 (0.015)***</td>
+<td align="center">0.061 (0.011)***</td>
+<td align="center">-0.688 (0.011)***</td>
 </tr>
 <tr class="even">
 <td align="center">daylight</td>
-<td align="center">-0.117 (0.017)***</td>
-<td align="center">-0.327 (0.012)***</td>
-<td align="center">0.407 (0.012)***</td>
+<td align="center">-0.116 (0.017)***</td>
+<td align="center">-0.335 (0.012)***</td>
+<td align="center">0.415 (0.012)***</td>
 </tr>
 </tbody>
 </table>
@@ -757,15 +757,15 @@ Phoenix, Coefficients with Standard Errors</caption>
 <tbody>
 <tr class="odd">
 <td align="center">(Intercept)</td>
-<td align="center">-2.368 (0.097)***</td>
-<td align="center">-0.216 (0.066)***</td>
-<td align="center">-0.379 (0.063)***</td>
+<td align="center">-2.378 (0.094)***</td>
+<td align="center">-0.209 (0.064)**</td>
+<td align="center">-0.381 (0.061)***</td>
 </tr>
 <tr class="even">
 <td align="center">daylight</td>
-<td align="center">-0.161 (0.024)***</td>
-<td align="center">-0.144 (0.018)***</td>
-<td align="center">0.267 (0.019)***</td>
+<td align="center">-0.157 (0.024)***</td>
+<td align="center">-0.148 (0.018)***</td>
+<td align="center">0.270 (0.019)***</td>
 </tr>
 <tr class="odd">
 <td align="center">SUBJ_AGE</td>
@@ -775,33 +775,33 @@ Phoenix, Coefficients with Standard Errors</caption>
 </tr>
 <tr class="even">
 <td align="center">officer_black</td>
-<td align="center">-0.030 (0.028)</td>
-<td align="center">0.061 (0.021)**</td>
+<td align="center">-0.029 (0.028)</td>
+<td align="center">0.060 (0.021)**</td>
 <td align="center">-0.038 (0.023)</td>
 </tr>
 <tr class="odd">
 <td align="center">officer_hisp</td>
-<td align="center">-0.026 (0.018)</td>
-<td align="center">0.044 (0.013)***</td>
+<td align="center">-0.020 (0.017)</td>
+<td align="center">0.040 (0.013)**</td>
 <td align="center">-0.030 (0.014)*</td>
 </tr>
 <tr class="even">
 <td align="center">officer_male</td>
-<td align="center">0.052 (0.023)*</td>
-<td align="center">-0.076 (0.017)***</td>
-<td align="center">0.048 (0.018)**</td>
+<td align="center">0.053 (0.022)*</td>
+<td align="center">-0.075 (0.017)***</td>
+<td align="center">0.047 (0.017)**</td>
 </tr>
 <tr class="odd">
 <td align="center">stop_hour</td>
-<td align="center">-0.009 (0.002)***</td>
+<td align="center">-0.009 (0.001)***</td>
 <td align="center">-0.007 (0.001)***</td>
 <td align="center">0.014 (0.001)***</td>
 </tr>
 <tr class="even">
 <td align="center">subj_male</td>
-<td align="center">-0.039 (0.014)**</td>
-<td align="center">0.156 (0.011)***</td>
-<td align="center">-0.146 (0.011)***</td>
+<td align="center">-0.038 (0.014)**</td>
+<td align="center">0.159 (0.011)***</td>
+<td align="center">-0.150 (0.011)***</td>
 </tr>
 </tbody>
 </table>
@@ -837,8 +837,8 @@ Criminology Phoenix page</a>
 href="https://github.com/jacobtnyoung/OpenCrimPhx/issues/new">Issues</a>
 page. Thanks!</p>
 <p><br><br></p>
-<div id="last-updated-11-july-2025" class="section level6">
-<h6><strong><em>Last updated 11 July, 2025</em></strong></h6>
+<div id="last-updated-13-august-2025" class="section level6">
+<h6><strong><em>Last updated 13 August, 2025</em></strong></h6>
 </div>
 </div>
 
