@@ -236,6 +236,30 @@ crimeRatesMonthType %>%
 
 ```
 
+### Rates of Crime by Violent or Non-Violent and Month from 2016 to Present
+
+<br>
+
+```{r}
+
+###HERE:
+
+# These rates have to be recalculated; probably just go back and rebuild this in the main file?
+
+# create the augmented data set
+crimeRatesMonthTypeVnV <- crimeRatesMonthType |> 
+  mutate(
+    crime.type = case_when(
+      crime.type %in% c("Assault", "Homicide", "Rape", "Robbery") ~ "violent",
+      crime.type %in% c("Arson", "Burglary", "Drugs", "MV Theft", "Theft") ~ "non-violent",
+      TRUE ~ crime.type  # keep original if it doesn't match
+    )
+    
+  )
+
+```
+
+
 <br>
 
 ----
