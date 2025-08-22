@@ -1,0 +1,350 @@
+---
+title: "Pre-Processing Calls for Service (Police) for Phoenix"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+        theme: simplex 
+        self-contained: true
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set( echo = TRUE, 
+                      message = FALSE, 
+                      warning = FALSE, 
+                      fig.width = 12, 
+                      fig.height = 10 )
+
+```
+
+<br>
+
+The [Calls for Police Service](https://www.phoenixopendata.com/dataset/calls-for-service) file from the [data portal](https://www.phoenixopendata.com/) contains all citizen-generated dispatched calls for police service. Officer self-initiated calls and non dispatched calls such as calls for general information or calls that are transferred to other departments such as FIRE for response are not included. The Calls for [Service to Fire]() are available at: **INSERT URL FOR FIRE CALLS FOR SERVICE**. The city updates the [file]("https://www.phoenixopendata.com/dataset/64a60154-3b2d-4583-8fb5-6d5e1b469c28/resource/1d536ee6-7ffb-49c3-bffe-5cdd98a3c97e/download/calls-for-service_calls-for-service_callsforservice.csv") at 11am every day and it contains data beginning November 2015 up to 7 days before the posting date. 
+
+As we did with the crime data (**NEED URL TO CRIME PREPROCESSING HERE**), we need to do some pre-processing. Mainly, cleaning up variables, creating basic objects, and incorporating population data to calculate rates.
+
+<br><br>
+
+## Setup and Loading the Data
+
+<br>
+
+### Preparing the environment
+
+First we need to clear the workspace and load the libraries we are going to use.
+
+<br>
+
+```{r}
+
+# clear workspace
+rm( list = ls() )
+
+
+# load libraries
+library( dplyr )        # used for wrangling the data
+library( tidyr )        # used for wrangling the data
+library( openxlsx )     # for opening an excel file
+library( here )         # for referencing the local directory
+library( tidycensus )   # getting data from the census API
+library( zoo )          # to help with interpolation
+
+
+```
+
+<br>
+
+### Loading the data
+
+Next we want to load the data and do some cleaning. The data can be called directly from the website link, [here]("https://www.phoenixopendata.com/dataset/64a60154-3b2d-4583-8fb5-6d5e1b469c28/resource/1d536ee6-7ffb-49c3-bffe-5cdd98a3c97e/download/calls-for-service_calls-for-service_callsforservice.csv"). If you take a look through the page, you will see that there is a file for all years combined, as well as files for each separate years. 
+
+<br>
+
+```{r, results="hide"}
+
+# define the url for the full file
+url <- "https://www.phoenixopendata.com/dataset/64a60154-3b2d-4583-8fb5-6d5e1b469c28/resource/1d536ee6-7ffb-49c3-bffe-5cdd98a3c97e/download/calls-for-service_calls-for-service_callsforservice.csv"
+
+# assign the data to an object
+cfps_data <- read.csv( url, as.is = TRUE, header = TRUE )
+
+# remove duplicate ids
+duplicate_ids <- cfps_data$INCIDENT_NUM[ duplicated( cfps_data$INCIDENT_NUM )]
+cfps_data <- cfps_data[ !cfps_data$INCIDENT_NUM %in% duplicate_ids, ]
+rm( duplicate_ids )
+
+# clean up the dates
+date_vec <- strptime( cfps_data$CALL_RECEIVED, format="%m/%d/%Y %H:%M" )
+
+cfps_data$year   <- format( date_vec, format="%Y" )
+cfps_data$month  <- format( date_vec, format="%B" )
+cfps_data$day365 <- format( date_vec, format="%j" )
+cfps_data$week   <- format( date_vec, format="%V" )
+
+# now we want to clean up the times
+cfps_data$hour   <- format( date_vec, format = "%H" ) %>% as.numeric()
+
+
+HERE:
+  figure out what the DISP_CODE variable means
+  If you look at the DISPOSITION variable, you will see that there is a lot of
+  situations (like half) where there is no action.
+  For this same variable there are a lot of other 
+
+I think this is where you start because about half of these are situation
+where no
+
+
+
+# clean up the variable classifying the cases
+cfps_data <- 
+  cfps_data %>% 
+  mutate( call_type = case_when( 
+    UCR.CRIME.CATEGORY == "AGGRAVATED ASSAULT" ~ "Assault",
+    UCR.CRIME.CATEGORY == "ARSON" ~ "Arson",
+    UCR.CRIME.CATEGORY == "BURGLARY" ~ "Burglary",
+    UCR.CRIME.CATEGORY == "DRUG OFFENSE" ~ "Drugs",
+    UCR.CRIME.CATEGORY == "LARCENY-THEFT" ~ "Theft",
+    UCR.CRIME.CATEGORY == "MURDER AND NON-NEGLIGENT MANSLAUGHTER" ~ "Homicide",
+    UCR.CRIME.CATEGORY == "MOTOR VEHICLE THEFT" ~ "MV Theft",
+    UCR.CRIME.CATEGORY == "RAPE" ~ "Rape",
+    UCR.CRIME.CATEGORY == "ROBBERY" ~ "Robbery" ) )
+
+# drop cases from 2015 (these are dropped because the 2015 cases begin in December)
+crimeData <- 
+  crimeData %>% 
+  filter( year != 2015 )
+
+# drop cases for the most recent month (since the data for the current month are incomplete)
+crimeData <- crimeData[ ! ( 
+  crimeData$month == format( Sys.Date(), format="%B" ) &
+    crimeData$year == format( Sys.Date(), format="%Y" ) 
+) , ]
+
+```
+
+<br><br>
+
+## Adjusting for Population
+
+Right now, the `crimeData` object is a list of incidents. When we go to aggregate over months or years, we are going to want to adjust based on population differences. In other words, we will want to calculate the rates (not just examine raw counts).
+
+The rates are computed using population data from the [Census Bureau](https://www.census.gov/topics/population.html). The command below uses the Census Bureau API to pull the data. To see more about how the API is used, see the [phoenix-population.R](/Users/jyoung20/ASU Dropbox/Jacob Young/GitHub_repos/OpenCrimPhx/utils/phoenix-population.R) file. As you will see if you look through the [phoenix-population.R](/Users/jyoung20/ASU Dropbox/Jacob Young/GitHub_repos/OpenCrimPhx/utils/phoenix-population.R) file, population data are available for the years 2016-2022 and interpolated for the years 2023-`r format( Sys.Date(), "%Y" )`.
+
+<br>
+
+```{r}
+
+import::here( "phoenixPopDat",
+              .from = here::here( "utils/phoenix-population.R" ),
+              .character_only = TRUE )
+
+```
+
+<br>
+
+We now have an object, `phoenixPopDat` that is the yearly population for Phoenix. As noted above, the population for 2023-`r format( Sys.Date(), "%Y" )` are just an estimate, as these are not yet available through the Census Bureau's API. Also, the data for 2020 are interpolated as well due to low response rates. The Census Bureau did released a set of experimental estimates for the 2020 1-year ACS, but for ease of analysis here we will just interpolate the data.
+
+<br><br>
+
+## Appending the Geo Data
+
+We can append the geographic data for the data. This piece calls the [crimeDatGeo2016-2024.rds](https://github.com/jacobtnyoung/OpenCrimPhx/blob/main/data/data-geo/crimeDatGeo2016-2024.rds) file that is created using the [crime-geo.R](/Users/jyoung20/ASU Dropbox/Jacob Young/GitHub_repos/OpenCrimPhx/utils/crime-geo.R) script. It uses the Census API to pull coordinate data.
+
+```{r}
+
+# get the file
+crimeDatGeo <- readRDS( here( "data/data-geo/crimeDatGeo2016-2024.rds" ) )
+
+# merge the geographic data with the cases
+crimeData <- left_join( crimeData, crimeDatGeo, by = "INC.NUMBER" )
+
+```
+
+<br><br>
+
+## Creating Objects
+
+<br>
+
+### Counts
+
+Now that we have the counts pre-processed and the population data, we can build a few objects that we can use for analysis.
+
+<br>
+
+```{r}
+
+# daily count of crimes
+crimesByDay <- 
+  crimeData %>% 
+  select( year, month, day365 ) %>%   
+  filter( !is.na( day365 ) ) %>% 
+  group_by( year, month, day365 ) %>% 
+  summarize( counts = n() ) %>% 
+  ungroup() %>% 
+  mutate( day.time = seq( 1, length( counts ) ) ) %>% 
+  select( counts, day.time ) %>% 
+  mutate( days = 
+            seq( 
+              as.Date( head( strptime( crimeData$OCCURRED.ON, format="%m/%d/%Y %H:%M" ) ) )[1], 
+              as.Date( tail( strptime( crimeData$OCCURRED.ON, format="%m/%d/%Y %H:%M" ) ) )[6], 
+              length.out = length( counts ) ) ) %>% 
+  arrange( day.time )
+crimesByDay <- as.data.frame( crimesByDay )
+
+# monthly count of crimes
+crimesByMonth <- 
+  crimeData %>% 
+  select( year, month ) %>%   
+  filter( year != 2015 ) %>%  
+  filter( !is.na( year ) ) %>% 
+  group_by( year, month ) %>% 
+  summarize( counts = n() ) %>% 
+  spread( year, counts ) %>% 
+  arrange( match( month, month.name ) ) %>% 
+  select( !month )
+
+# monthly count of crimes by type
+crimesByTypeByMonth <-
+  crimeData %>% 
+  select( year, month, crime.type ) %>%   
+  filter( year != 2015 ) %>%  
+  filter( !is.na( year ) ) %>% 
+  group_by( year, month, crime.type ) %>% 
+  summarize( counts = n() ) %>% 
+  arrange( match( month, month.name ) ) %>% 
+  select( !month )
+crimesByTypeByMonth$month <-factor( crimesByTypeByMonth$month,levels = month.name )
+crimesByTypeByMonth$month <-factor( month.abb[crimesByTypeByMonth$month],levels = month.abb )
+
+# crimes by year
+crimesByYear <- 
+  crimeData %>% 
+  select( year ) %>%   
+  filter( year != 2015 ) %>%  
+  filter( !is.na( year ) ) %>% 
+  group_by( year ) %>% 
+  summarize( counts = n() ) 
+
+# yearly count of crimes by type
+crimesByTypeByYear <-
+  crimeData %>% 
+  select( year, crime.type ) %>%   
+  filter( year != 2015 ) %>%  
+  filter( !is.na( year ) ) %>% 
+  group_by( year, crime.type ) %>% 
+  summarize( counts = n() )
+
+
+```
+
+<br>
+
+### Rates
+
+Now we want to create objects that capture the rates.
+
+<br>
+
+```{r}
+
+# crime rate is calculated as the count of 
+# crimes divided by the population size, then multiplied by 100,000
+
+# calculate the crime rate by month
+crimeRatesMonth <- as.data.frame( crimesByMonth )
+
+for ( i in 1: dim( crimeRatesMonth )[2] ){
+  crimeRatesMonth[,i] <- ( crimeRatesMonth[,i] / phoenixPopDat[i,2] ) * 100000
+}
+
+# calculate the crime rate by year
+crimeRatesYear <- as.data.frame( crimesByYear )
+
+for ( i in 1: dim( crimeRatesYear )[1] ){
+  crimeRatesYear[i,2] <- ( crimeRatesYear[i,2] / phoenixPopDat[i,2] ) * 100000
+}
+
+# rename the counts column to be rates
+crimeRatesYear <- crimeRatesYear %>%  rename( rates = counts )
+
+
+# calculate rates for types by month
+crimeRatesMonthType <- as.data.frame( crimesByTypeByMonth )
+
+# assign the population data
+crimeRatesMonthType <- crimeRatesMonthType %>%
+  left_join( phoenixPopDat, by = "year" )
+
+# create the rates
+crimeRatesMonthType <- crimeRatesMonthType %>% 
+  mutate( rates = ( ( counts / population ) * 100000 ) )
+
+
+# calculate rates for types by year
+crimeRatesYearType <- as.data.frame( crimesByTypeByYear )
+
+# assign the population data
+crimeRatesYearType <- crimeRatesYearType %>%
+  left_join( phoenixPopDat, by = "year" )
+
+# create the rates
+crimeRatesYearType <- crimeRatesYearType %>% 
+  mutate( rates = ( ( counts / population ) * 100000 ) )
+
+```
+
+<br><br>
+
+## Saving the File
+
+We can now save the objects as a file that can be referenced for analysis on separate pages. 
+
+<br>
+
+```{r}
+
+# save the objects as .rds files
+
+saveRDS( crimeData,       file = here( "data/crimeData.rds" ) )
+saveRDS( crimesByDay,     file = here( "data/crimesByDay.rds" ) )
+saveRDS( crimesByMonth,   file = here( "data/crimesByMonth.rds" ) )
+saveRDS( crimesByYear,    file = here( "data/crimesByYear.rds" ) )
+saveRDS( crimeRatesMonth, file = here( "data/crimeRatesMonth.rds" ) )
+saveRDS( crimeRatesYear,  file = here( "data/crimeRatesYear.rds" ) )
+
+# crimes by type
+saveRDS( crimesByTypeByMonth, file = here( "data/crimesByTypeByMonth.rds" ) )
+saveRDS( crimesByTypeByYear , file = here( "data/crimesByTypeByYear.rds" ) )
+saveRDS( crimeRatesMonthType, file = here( "data/crimeRatesMonthType.rds" ) )
+saveRDS( crimeRatesYearType , file = here( "data/crimeRatesMonthYear.rds" ) )
+
+
+```
+
+If you look in the [data](https://jacobtnyoung.github.io/OpenCrimPhx/data) folder for the repository, you will see that these files have been added. When I run this script, I have to push these files to the repository. But, we can now reference them using the `readRDS()` function.
+
+<br><br>
+
+## Next steps...  
+
+Now that the data are pre-processed, we can reference this object when we conduct analyses. Visit the [Crime in Phoenix](https://jacobtnyoung.github.io/OpenCrimPhx/crime.html) page to see these analyses.  
+
+###
+
+<br>
+
+----
+
+<p align="center">
+[Back to Open Criminology Phoenix page](https://jacobtnyoung.github.io/OpenCrimPhx/)
+</p>
+
+<br>
+
+***Please*** report any needed corrections to the [Issues](https://github.com/jacobtnyoung/OpenCrimPhx/issues/new) page. Thanks!
+
+<br><br>
+
+###### ***Last updated `r format(Sys.time(), '%d %B, %Y')`***

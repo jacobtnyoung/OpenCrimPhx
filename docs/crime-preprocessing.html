@@ -267,7 +267,7 @@ $(document).ready(function () {
 
 
 <h1 class="title toc-ignore">Pre-Processing Crime Data for Phoenix</h1>
-<h4 class="date">13 August, 2025</h4>
+<h4 class="date">22 August, 2025</h4>
 
 </div>
 
@@ -316,56 +316,70 @@ href="%22https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab
 url &lt;- &quot;https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crime-data_crime-data_crimestat.csv&quot;
 
 # assign the data to an object
-crimeData &lt;- read.csv( url, as.is = TRUE, header = TRUE )
+crime_dat &lt;- read.csv( url, as.is = TRUE, header = TRUE )
 
 # remove cases that are missing data
-crimeData &lt;- na.omit( crimeData )
+crime_dat &lt;- na.omit( crime_dat )
 
 # remove duplicate ids
-duplicateIds &lt;- crimeData$INC.NUMBER[ duplicated( crimeData$INC.NUMBER )]
-crimeData &lt;- crimeData[ !crimeData$INC.NUMBER %in% duplicateIds, ]
-rm( duplicateIds )
+duplicate_ids &lt;- crime_dat$INC.NUMBER[ duplicated( crime_dat$INC.NUMBER )]
+crime_dat &lt;- crime_dat[ !crime_dat$INC.NUMBER %in% duplicate_ids, ]
+rm( duplicate_ids )
 
 # clean up the dates
-date.vec &lt;- strptime( crimeData$OCCURRED.ON, format=&quot;%m/%d/%Y %H:%M&quot; )
-crimeData$year   &lt;- format( date.vec, format=&quot;%Y&quot; )
-crimeData$month  &lt;- format( date.vec, format=&quot;%B&quot; )
-crimeData$day365 &lt;- format( date.vec, format=&quot;%j&quot; )
-crimeData$week   &lt;- format( date.vec, format=&quot;%V&quot; )
+date_vec &lt;- strptime( crime_dat$OCCURRED.ON, format=&quot;%m/%d/%Y %H:%M&quot; )
+crime_dat$year   &lt;- format( date_vec, format=&quot;%Y&quot; )
+crime_dat$month  &lt;- format( date_vec, format=&quot;%B&quot; )
+crime_dat$day365 &lt;- format( date_vec, format=&quot;%j&quot; )
+crime_dat$week   &lt;- format( date_vec, format=&quot;%V&quot; )
 
 # now we want to clean up the times
-crimeData$hour   &lt;- format(date.vec, format = &quot;%H&quot;) %&gt;% as.numeric()
+crime_dat$hour   &lt;- format(date_vec, format = &quot;%H&quot;) %&gt;% as.numeric()
+
 
 # clean up the variable classifying the cases
-crimeData &lt;- 
-  crimeData %&gt;% 
-  mutate( crime.type = case_when( 
-    UCR.CRIME.CATEGORY == &quot;AGGRAVATED ASSAULT&quot; ~ &quot;Assault&quot;,
-    UCR.CRIME.CATEGORY == &quot;ARSON&quot; ~ &quot;Arson&quot;,
-    UCR.CRIME.CATEGORY == &quot;BURGLARY&quot; ~ &quot;Burglary&quot;,
-    UCR.CRIME.CATEGORY == &quot;DRUG OFFENSE&quot; ~ &quot;Drugs&quot;,
-    UCR.CRIME.CATEGORY == &quot;LARCENY-THEFT&quot; ~ &quot;Theft&quot;,
-    UCR.CRIME.CATEGORY == &quot;MURDER AND NON-NEGLIGENT MANSLAUGHTER&quot; ~ &quot;Homicide&quot;,
-    UCR.CRIME.CATEGORY == &quot;MOTOR VEHICLE THEFT&quot; ~ &quot;MV Theft&quot;,
-    UCR.CRIME.CATEGORY == &quot;RAPE&quot; ~ &quot;Rape&quot;,
-    UCR.CRIME.CATEGORY == &quot;ROBBERY&quot; ~ &quot;Robbery&quot; ) )
+crime_dat &lt;- 
+  crime_dat %&gt;% 
+  mutate( 
+    crime_type = case_when( 
+      UCR.CRIME.CATEGORY == &quot;AGGRAVATED ASSAULT&quot; ~ &quot;Assault&quot;,
+      UCR.CRIME.CATEGORY == &quot;ARSON&quot; ~ &quot;Arson&quot;,
+      UCR.CRIME.CATEGORY == &quot;BURGLARY&quot; ~ &quot;Burglary&quot;,
+      UCR.CRIME.CATEGORY == &quot;DRUG OFFENSE&quot; ~ &quot;Drugs&quot;,
+      UCR.CRIME.CATEGORY == &quot;LARCENY-THEFT&quot; ~ &quot;Theft&quot;,
+      UCR.CRIME.CATEGORY == &quot;MURDER AND NON-NEGLIGENT MANSLAUGHTER&quot; ~ &quot;Homicide&quot;,
+      UCR.CRIME.CATEGORY == &quot;MOTOR VEHICLE THEFT&quot; ~ &quot;MV Theft&quot;,
+      UCR.CRIME.CATEGORY == &quot;RAPE&quot; ~ &quot;Rape&quot;,
+      UCR.CRIME.CATEGORY == &quot;ROBBERY&quot; ~ &quot;Robbery&quot; ), 
+    crime_vnv = case_when(
+      UCR.CRIME.CATEGORY == &quot;AGGRAVATED ASSAULT&quot; ~ &quot;Violent&quot;,
+      UCR.CRIME.CATEGORY == &quot;ARSON&quot; ~ &quot;NonViolent&quot;,
+      UCR.CRIME.CATEGORY == &quot;BURGLARY&quot; ~ &quot;NonViolent&quot;,
+      UCR.CRIME.CATEGORY == &quot;DRUG OFFENSE&quot; ~ &quot;NonViolent&quot;,
+      UCR.CRIME.CATEGORY == &quot;LARCENY-THEFT&quot; ~ &quot;NonViolent&quot;,
+      UCR.CRIME.CATEGORY == &quot;MURDER AND NON-NEGLIGENT MANSLAUGHTER&quot; ~ &quot;Violent&quot;,
+      UCR.CRIME.CATEGORY == &quot;MOTOR VEHICLE THEFT&quot; ~ &quot;NonViolent&quot;,
+      UCR.CRIME.CATEGORY == &quot;RAPE&quot; ~ &quot;Violent&quot;,
+      UCR.CRIME.CATEGORY == &quot;ROBBERY&quot; ~ &quot;Violent&quot; ) 
+    )
+
 
 # drop cases from 2015 (these are dropped because the 2015 cases begin in December)
-crimeData &lt;- 
-  crimeData %&gt;% 
+crime_dat &lt;- 
+  crime_dat %&gt;% 
   filter( year != 2015 )
 
 # drop cases for the most recent month (since the data for the current month are incomplete)
-crimeData &lt;- crimeData[ ! ( 
-  crimeData$month == format( Sys.Date(), format=&quot;%B&quot; ) &amp;
-    crimeData$year == format( Sys.Date(), format=&quot;%Y&quot; ) 
+crime_dat &lt;- crime_dat[ ! ( 
+  crime_dat$month == format( Sys.Date(), format=&quot;%B&quot; ) &amp;
+    crime_dat$year == format( Sys.Date(), format=&quot;%Y&quot; ) 
 ) , ]</code></pre>
 <p><br><br></p>
 </div>
 </div>
 <div id="adjusting-for-population" class="section level2">
 <h2>Adjusting for Population</h2>
-<p>Right now, the <code>crimeData</code> object is a list of incidents.
+<p>Right now, the <code>crime_dat</code> object is a list of incidents.
 When we go to aggregate over months or years, we are going to want to
 adjust based on population differences. In other words, we will want to
 calculate the rates (not just examine raw counts).</p>
@@ -396,15 +410,15 @@ just interpolate the data.</p>
 <h2>Appending the Geo Data</h2>
 <p>We can append the geographic data for the data. This piece calls the
 <a
-href="https://github.com/jacobtnyoung/OpenCrimPhx/blob/main/data/data-geo/crimeDatGeo2016-2024.rds">crimeDatGeo2016-2024.rds</a>
+href="https://github.com/jacobtnyoung/OpenCrimPhx/blob/main/data/data-geo/crime_dat_geo2016-2024.rds">crime_dat_geo2016-2024.rds</a>
 file that is created using the <a
 href="/Users/jyoung20/ASU%20Dropbox/Jacob%20Young/GitHub_repos/OpenCrimPhx/utils/crime-geo.R">crime-geo.R</a>
 script. It uses the Census API to pull coordinate data.</p>
 <pre class="r"><code># get the file
-crimeDatGeo &lt;- readRDS( here( &quot;data/data-geo/crimeDatGeo2016-2024.rds&quot; ) )
+crime_dat_geo &lt;- readRDS( here( &quot;data/data-geo/crimeDatGeo2016-2024.rds&quot; ) )
 
 # merge the geographic data with the cases
-crimeData &lt;- left_join( crimeData, crimeDatGeo, by = &quot;INC.NUMBER&quot; )</code></pre>
+crime_dat &lt;- left_join( crime_dat, crime_dat_geo, by = &quot;INC.NUMBER&quot; )</code></pre>
 <p><br><br></p>
 </div>
 <div id="creating-objects" class="section level2">
@@ -416,26 +430,26 @@ crimeData &lt;- left_join( crimeData, crimeDatGeo, by = &quot;INC.NUMBER&quot; )
 can build a few objects that we can use for analysis.</p>
 <p><br></p>
 <pre class="r"><code># daily count of crimes
-crimesByDay &lt;- 
-  crimeData %&gt;% 
+crimes_by_day &lt;- 
+  crime_dat %&gt;% 
   select( year, month, day365 ) %&gt;%   
   filter( !is.na( day365 ) ) %&gt;% 
   group_by( year, month, day365 ) %&gt;% 
   summarize( counts = n() ) %&gt;% 
   ungroup() %&gt;% 
-  mutate( day.time = seq( 1, length( counts ) ) ) %&gt;% 
-  select( counts, day.time ) %&gt;% 
+  mutate( day_time = seq( 1, length( counts ) ) ) %&gt;% 
+  select( counts, day_time ) %&gt;% 
   mutate( days = 
             seq( 
-              as.Date( head( strptime( crimeData$OCCURRED.ON, format=&quot;%m/%d/%Y %H:%M&quot; ) ) )[1], 
-              as.Date( tail( strptime( crimeData$OCCURRED.ON, format=&quot;%m/%d/%Y %H:%M&quot; ) ) )[6], 
+              as.Date( head( strptime( crime_dat$OCCURRED.ON, format=&quot;%m/%d/%Y %H:%M&quot; ) ) )[1], 
+              as.Date( tail( strptime( crime_dat$OCCURRED.ON, format=&quot;%m/%d/%Y %H:%M&quot; ) ) )[6], 
               length.out = length( counts ) ) ) %&gt;% 
-  arrange( day.time )
-crimesByDay &lt;- as.data.frame( crimesByDay )
+  arrange( day_time )
+crimes_by_day &lt;- as.data.frame( crimes_by_day )
 
 # monthly count of crimes
-crimesByMonth &lt;- 
-  crimeData %&gt;% 
+crimes_by_month &lt;- 
+  crime_dat %&gt;% 
   select( year, month ) %&gt;%   
   filter( year != 2015 ) %&gt;%  
   filter( !is.na( year ) ) %&gt;% 
@@ -446,21 +460,21 @@ crimesByMonth &lt;-
   select( !month )
 
 # monthly count of crimes by type
-crimesByTypeByMonth &lt;-
-  crimeData %&gt;% 
-  select( year, month, crime.type ) %&gt;%   
+crimes_by_type_by_month &lt;-
+  crime_dat %&gt;% 
+  select( year, month, crime_type ) %&gt;%   
   filter( year != 2015 ) %&gt;%  
   filter( !is.na( year ) ) %&gt;% 
-  group_by( year, month, crime.type ) %&gt;% 
+  group_by( year, month, crime_type ) %&gt;% 
   summarize( counts = n() ) %&gt;% 
   arrange( match( month, month.name ) ) %&gt;% 
   select( !month )
-crimesByTypeByMonth$month &lt;-factor( crimesByTypeByMonth$month,levels = month.name )
-crimesByTypeByMonth$month &lt;-factor( month.abb[crimesByTypeByMonth$month],levels = month.abb )
+crimes_by_type_by_month$month &lt;-factor( crimes_by_type_by_month$month,levels = month.name )
+crimes_by_type_by_month$month &lt;-factor( month.abb[crimes_by_type_by_month$month],levels = month.abb )
 
 # crimes by year
-crimesByYear &lt;- 
-  crimeData %&gt;% 
+crimes_by_year &lt;- 
+  crime_dat %&gt;% 
   select( year ) %&gt;%   
   filter( year != 2015 ) %&gt;%  
   filter( !is.na( year ) ) %&gt;% 
@@ -468,12 +482,12 @@ crimesByYear &lt;-
   summarize( counts = n() ) 
 
 # yearly count of crimes by type
-crimesByTypeByYear &lt;-
-  crimeData %&gt;% 
-  select( year, crime.type ) %&gt;%   
+crimes_by_type_by_year &lt;-
+  crime_dat %&gt;% 
+  select( year, crime_type ) %&gt;%   
   filter( year != 2015 ) %&gt;%  
   filter( !is.na( year ) ) %&gt;% 
-  group_by( year, crime.type ) %&gt;% 
+  group_by( year, crime_type ) %&gt;% 
   summarize( counts = n() )</code></pre>
 <p><br></p>
 </div>
@@ -485,44 +499,44 @@ crimesByTypeByYear &lt;-
 # crimes divided by the population size, then multiplied by 100,000
 
 # calculate the crime rate by month
-crimeRatesMonth &lt;- as.data.frame( crimesByMonth )
+crime_rates_month &lt;- as.data.frame( crimes_by_month )
 
-for ( i in 1: dim( crimeRatesMonth )[2] ){
-  crimeRatesMonth[,i] &lt;- ( crimeRatesMonth[,i] / phoenixPopDat[i,2] ) * 100000
+for ( i in 1: dim( crime_rates_month )[2] ){
+  crime_rates_month[,i] &lt;- ( crime_rates_month[,i] / phoenixPopDat[i,2] ) * 100000
 }
 
 # calculate the crime rate by year
-crimeRatesYear &lt;- as.data.frame( crimesByYear )
+crime_rates_year &lt;- as.data.frame( crimes_by_year )
 
-for ( i in 1: dim( crimeRatesYear )[1] ){
-  crimeRatesYear[i,2] &lt;- ( crimeRatesYear[i,2] / phoenixPopDat[i,2] ) * 100000
+for ( i in 1: dim( crime_rates_year )[1] ){
+  crime_rates_year[i,2] &lt;- ( crime_rates_year[i,2] / phoenixPopDat[i,2] ) * 100000
 }
 
 # rename the counts column to be rates
-crimeRatesYear &lt;- crimeRatesYear %&gt;%  rename( rates = counts )
+crime_rates_year &lt;- crime_rates_year %&gt;%  rename( rates = counts )
 
 
 # calculate rates for types by month
-crimeRatesMonthType &lt;- as.data.frame( crimesByTypeByMonth )
+crime_rates_month_type &lt;- as.data.frame( crimes_by_type_by_month )
 
 # assign the population data
-crimeRatesMonthType &lt;- crimeRatesMonthType %&gt;%
+crime_rates_month_type &lt;- crime_rates_month_type %&gt;%
   left_join( phoenixPopDat, by = &quot;year&quot; )
 
 # create the rates
-crimeRatesMonthType &lt;- crimeRatesMonthType %&gt;% 
+crime_rates_month_type &lt;- crime_rates_month_type %&gt;% 
   mutate( rates = ( ( counts / population ) * 100000 ) )
 
 
 # calculate rates for types by year
-crimeRatesYearType &lt;- as.data.frame( crimesByTypeByYear )
+crime_rates_year_type &lt;- as.data.frame( crimes_by_type_by_year )
 
 # assign the population data
-crimeRatesYearType &lt;- crimeRatesYearType %&gt;%
+crime_rates_year_type &lt;- crime_rates_year_type %&gt;%
   left_join( phoenixPopDat, by = &quot;year&quot; )
 
 # create the rates
-crimeRatesYearType &lt;- crimeRatesYearType %&gt;% 
+crime_rates_year_type &lt;- crime_rates_year_type %&gt;% 
   mutate( rates = ( ( counts / population ) * 100000 ) )</code></pre>
 <p><br><br></p>
 </div>
@@ -534,18 +548,18 @@ analysis on separate pages.</p>
 <p><br></p>
 <pre class="r"><code># save the objects as .rds files
 
-saveRDS( crimeData,       file = here( &quot;data/crimeData.rds&quot; ) )
-saveRDS( crimesByDay,     file = here( &quot;data/crimesByDay.rds&quot; ) )
-saveRDS( crimesByMonth,   file = here( &quot;data/crimesByMonth.rds&quot; ) )
-saveRDS( crimesByYear,    file = here( &quot;data/crimesByYear.rds&quot; ) )
-saveRDS( crimeRatesMonth, file = here( &quot;data/crimeRatesMonth.rds&quot; ) )
-saveRDS( crimeRatesYear,  file = here( &quot;data/crimeRatesYear.rds&quot; ) )
+saveRDS( crime_dat,         file = here( &quot;data/crime_dat.rds&quot; ) )
+saveRDS( crimes_by_day,     file = here( &quot;data/crimes_by_day.rds&quot; ) )
+saveRDS( crimes_by_month,   file = here( &quot;data/crimes_by_month.rds&quot; ) )
+saveRDS( crimes_by_year,    file = here( &quot;data/crimes_by_year.rds&quot; ) )
+saveRDS( crime_rates_month, file = here( &quot;data/crime_rates_month.rds&quot; ) )
+saveRDS( crime_rates_year,  file = here( &quot;data/crime_rates_year.rds&quot; ) )
 
 # crimes by type
-saveRDS( crimesByTypeByMonth, file = here( &quot;data/crimesByTypeByMonth.rds&quot; ) )
-saveRDS( crimesByTypeByYear , file = here( &quot;data/crimesByTypeByYear.rds&quot; ) )
-saveRDS( crimeRatesMonthType, file = here( &quot;data/crimeRatesMonthType.rds&quot; ) )
-saveRDS( crimeRatesYearType , file = here( &quot;data/crimeRatesMonthYear.rds&quot; ) )</code></pre>
+saveRDS( crimes_by_type_by_month, file = here( &quot;data/crimes_by_type_by_month.rds&quot; ) )
+saveRDS( crimes_by_type_by_year , file = here( &quot;data/crimes_by_type_by_year.rds&quot; ) )
+saveRDS( crime_rates_month_type,  file = here( &quot;data/crime_rates_month_type.rds&quot; ) )
+saveRDS( crime_rates_year_type ,  file = here( &quot;data/crime_rates_monthYear.rds&quot; ) )</code></pre>
 <p>If you look in the <a
 href="https://jacobtnyoung.github.io/OpenCrimPhx/data">data</a> folder
 for the repository, you will see that these files have been added. When
@@ -573,8 +587,8 @@ Criminology Phoenix page</a>
 href="https://github.com/jacobtnyoung/OpenCrimPhx/issues/new">Issues</a>
 page. Thanks!</p>
 <p><br><br></p>
-<div id="last-updated-13-august-2025" class="section level6">
-<h6><strong><em>Last updated 13 August, 2025</em></strong></h6>
+<div id="last-updated-22-august-2025" class="section level6">
+<h6><strong><em>Last updated 22 August, 2025</em></strong></h6>
 </div>
 </div>
 </div>

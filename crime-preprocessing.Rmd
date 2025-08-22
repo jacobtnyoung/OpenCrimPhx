@@ -49,7 +49,6 @@ library( here )         # for referencing the local directory
 library( tidycensus )   # getting data from the census API
 library( zoo )          # to help with interpolation
 
-
 ```
 
 <br>
@@ -66,49 +65,63 @@ Next we want to load the data and do some cleaning. The data can be called direc
 url <- "https://www.phoenixopendata.com/dataset/cc08aace-9ca9-467f-b6c1-f0879ab1a358/resource/0ce3411a-2fc6-4302-a33f-167f68608a20/download/crime-data_crime-data_crimestat.csv"
 
 # assign the data to an object
-crimeData <- read.csv( url, as.is = TRUE, header = TRUE )
+crime_dat <- read.csv( url, as.is = TRUE, header = TRUE )
 
 # remove cases that are missing data
-crimeData <- na.omit( crimeData )
+crime_dat <- na.omit( crime_dat )
 
 # remove duplicate ids
-duplicateIds <- crimeData$INC.NUMBER[ duplicated( crimeData$INC.NUMBER )]
-crimeData <- crimeData[ !crimeData$INC.NUMBER %in% duplicateIds, ]
-rm( duplicateIds )
+duplicate_ids <- crime_dat$INC.NUMBER[ duplicated( crime_dat$INC.NUMBER )]
+crime_dat <- crime_dat[ !crime_dat$INC.NUMBER %in% duplicate_ids, ]
+rm( duplicate_ids )
 
 # clean up the dates
-date.vec <- strptime( crimeData$OCCURRED.ON, format="%m/%d/%Y %H:%M" )
-crimeData$year   <- format( date.vec, format="%Y" )
-crimeData$month  <- format( date.vec, format="%B" )
-crimeData$day365 <- format( date.vec, format="%j" )
-crimeData$week   <- format( date.vec, format="%V" )
+date_vec <- strptime( crime_dat$OCCURRED.ON, format="%m/%d/%Y %H:%M" )
+crime_dat$year   <- format( date_vec, format="%Y" )
+crime_dat$month  <- format( date_vec, format="%B" )
+crime_dat$day365 <- format( date_vec, format="%j" )
+crime_dat$week   <- format( date_vec, format="%V" )
 
 # now we want to clean up the times
-crimeData$hour   <- format(date.vec, format = "%H") %>% as.numeric()
+crime_dat$hour   <- format(date_vec, format = "%H") %>% as.numeric()
+
 
 # clean up the variable classifying the cases
-crimeData <- 
-  crimeData %>% 
-  mutate( crime.type = case_when( 
-    UCR.CRIME.CATEGORY == "AGGRAVATED ASSAULT" ~ "Assault",
-    UCR.CRIME.CATEGORY == "ARSON" ~ "Arson",
-    UCR.CRIME.CATEGORY == "BURGLARY" ~ "Burglary",
-    UCR.CRIME.CATEGORY == "DRUG OFFENSE" ~ "Drugs",
-    UCR.CRIME.CATEGORY == "LARCENY-THEFT" ~ "Theft",
-    UCR.CRIME.CATEGORY == "MURDER AND NON-NEGLIGENT MANSLAUGHTER" ~ "Homicide",
-    UCR.CRIME.CATEGORY == "MOTOR VEHICLE THEFT" ~ "MV Theft",
-    UCR.CRIME.CATEGORY == "RAPE" ~ "Rape",
-    UCR.CRIME.CATEGORY == "ROBBERY" ~ "Robbery" ) )
+crime_dat <- 
+  crime_dat %>% 
+  mutate( 
+    crime_type = case_when( 
+      UCR.CRIME.CATEGORY == "AGGRAVATED ASSAULT" ~ "Assault",
+      UCR.CRIME.CATEGORY == "ARSON" ~ "Arson",
+      UCR.CRIME.CATEGORY == "BURGLARY" ~ "Burglary",
+      UCR.CRIME.CATEGORY == "DRUG OFFENSE" ~ "Drugs",
+      UCR.CRIME.CATEGORY == "LARCENY-THEFT" ~ "Theft",
+      UCR.CRIME.CATEGORY == "MURDER AND NON-NEGLIGENT MANSLAUGHTER" ~ "Homicide",
+      UCR.CRIME.CATEGORY == "MOTOR VEHICLE THEFT" ~ "MV Theft",
+      UCR.CRIME.CATEGORY == "RAPE" ~ "Rape",
+      UCR.CRIME.CATEGORY == "ROBBERY" ~ "Robbery" ), 
+    crime_vnv = case_when(
+      UCR.CRIME.CATEGORY == "AGGRAVATED ASSAULT" ~ "Violent",
+      UCR.CRIME.CATEGORY == "ARSON" ~ "NonViolent",
+      UCR.CRIME.CATEGORY == "BURGLARY" ~ "NonViolent",
+      UCR.CRIME.CATEGORY == "DRUG OFFENSE" ~ "NonViolent",
+      UCR.CRIME.CATEGORY == "LARCENY-THEFT" ~ "NonViolent",
+      UCR.CRIME.CATEGORY == "MURDER AND NON-NEGLIGENT MANSLAUGHTER" ~ "Violent",
+      UCR.CRIME.CATEGORY == "MOTOR VEHICLE THEFT" ~ "NonViolent",
+      UCR.CRIME.CATEGORY == "RAPE" ~ "Violent",
+      UCR.CRIME.CATEGORY == "ROBBERY" ~ "Violent" ) 
+    )
+
 
 # drop cases from 2015 (these are dropped because the 2015 cases begin in December)
-crimeData <- 
-  crimeData %>% 
+crime_dat <- 
+  crime_dat %>% 
   filter( year != 2015 )
 
 # drop cases for the most recent month (since the data for the current month are incomplete)
-crimeData <- crimeData[ ! ( 
-  crimeData$month == format( Sys.Date(), format="%B" ) &
-    crimeData$year == format( Sys.Date(), format="%Y" ) 
+crime_dat <- crime_dat[ ! ( 
+  crime_dat$month == format( Sys.Date(), format="%B" ) &
+    crime_dat$year == format( Sys.Date(), format="%Y" ) 
 ) , ]
 
 ```
@@ -117,7 +130,7 @@ crimeData <- crimeData[ ! (
 
 ## Adjusting for Population
 
-Right now, the `crimeData` object is a list of incidents. When we go to aggregate over months or years, we are going to want to adjust based on population differences. In other words, we will want to calculate the rates (not just examine raw counts).
+Right now, the `crime_dat` object is a list of incidents. When we go to aggregate over months or years, we are going to want to adjust based on population differences. In other words, we will want to calculate the rates (not just examine raw counts).
 
 The rates are computed using population data from the [Census Bureau](https://www.census.gov/topics/population.html). The command below uses the Census Bureau API to pull the data. To see more about how the API is used, see the [phoenix-population.R](/Users/jyoung20/ASU Dropbox/Jacob Young/GitHub_repos/OpenCrimPhx/utils/phoenix-population.R) file. As you will see if you look through the [phoenix-population.R](/Users/jyoung20/ASU Dropbox/Jacob Young/GitHub_repos/OpenCrimPhx/utils/phoenix-population.R) file, population data are available for the years 2016-2022 and interpolated for the years 2023-`r format( Sys.Date(), "%Y" )`.
 
@@ -139,15 +152,15 @@ We now have an object, `phoenixPopDat` that is the yearly population for Phoenix
 
 ## Appending the Geo Data
 
-We can append the geographic data for the data. This piece calls the [crimeDatGeo2016-2024.rds](https://github.com/jacobtnyoung/OpenCrimPhx/blob/main/data/data-geo/crimeDatGeo2016-2024.rds) file that is created using the [crime-geo.R](/Users/jyoung20/ASU Dropbox/Jacob Young/GitHub_repos/OpenCrimPhx/utils/crime-geo.R) script. It uses the Census API to pull coordinate data.
+We can append the geographic data for the data. This piece calls the [crime_dat_geo2016-2024.rds](https://github.com/jacobtnyoung/OpenCrimPhx/blob/main/data/data-geo/crime_dat_geo2016-2024.rds) file that is created using the [crime-geo.R](/Users/jyoung20/ASU Dropbox/Jacob Young/GitHub_repos/OpenCrimPhx/utils/crime-geo.R) script. It uses the Census API to pull coordinate data.
 
 ```{r}
 
 # get the file
-crimeDatGeo <- readRDS( here( "data/data-geo/crimeDatGeo2016-2024.rds" ) )
+crime_dat_geo <- readRDS( here( "data/data-geo/crimeDatGeo2016-2024.rds" ) )
 
 # merge the geographic data with the cases
-crimeData <- left_join( crimeData, crimeDatGeo, by = "INC.NUMBER" )
+crime_dat <- left_join( crime_dat, crime_dat_geo, by = "INC.NUMBER" )
 
 ```
 
@@ -166,26 +179,26 @@ Now that we have the counts pre-processed and the population data, we can build 
 ```{r}
 
 # daily count of crimes
-crimesByDay <- 
-  crimeData %>% 
+crimes_by_day <- 
+  crime_dat %>% 
   select( year, month, day365 ) %>%   
   filter( !is.na( day365 ) ) %>% 
   group_by( year, month, day365 ) %>% 
   summarize( counts = n() ) %>% 
   ungroup() %>% 
-  mutate( day.time = seq( 1, length( counts ) ) ) %>% 
-  select( counts, day.time ) %>% 
+  mutate( day_time = seq( 1, length( counts ) ) ) %>% 
+  select( counts, day_time ) %>% 
   mutate( days = 
             seq( 
-              as.Date( head( strptime( crimeData$OCCURRED.ON, format="%m/%d/%Y %H:%M" ) ) )[1], 
-              as.Date( tail( strptime( crimeData$OCCURRED.ON, format="%m/%d/%Y %H:%M" ) ) )[6], 
+              as.Date( head( strptime( crime_dat$OCCURRED.ON, format="%m/%d/%Y %H:%M" ) ) )[1], 
+              as.Date( tail( strptime( crime_dat$OCCURRED.ON, format="%m/%d/%Y %H:%M" ) ) )[6], 
               length.out = length( counts ) ) ) %>% 
-  arrange( day.time )
-crimesByDay <- as.data.frame( crimesByDay )
+  arrange( day_time )
+crimes_by_day <- as.data.frame( crimes_by_day )
 
 # monthly count of crimes
-crimesByMonth <- 
-  crimeData %>% 
+crimes_by_month <- 
+  crime_dat %>% 
   select( year, month ) %>%   
   filter( year != 2015 ) %>%  
   filter( !is.na( year ) ) %>% 
@@ -196,21 +209,21 @@ crimesByMonth <-
   select( !month )
 
 # monthly count of crimes by type
-crimesByTypeByMonth <-
-  crimeData %>% 
-  select( year, month, crime.type ) %>%   
+crimes_by_type_by_month <-
+  crime_dat %>% 
+  select( year, month, crime_type ) %>%   
   filter( year != 2015 ) %>%  
   filter( !is.na( year ) ) %>% 
-  group_by( year, month, crime.type ) %>% 
+  group_by( year, month, crime_type ) %>% 
   summarize( counts = n() ) %>% 
   arrange( match( month, month.name ) ) %>% 
   select( !month )
-crimesByTypeByMonth$month <-factor( crimesByTypeByMonth$month,levels = month.name )
-crimesByTypeByMonth$month <-factor( month.abb[crimesByTypeByMonth$month],levels = month.abb )
+crimes_by_type_by_month$month <-factor( crimes_by_type_by_month$month,levels = month.name )
+crimes_by_type_by_month$month <-factor( month.abb[crimes_by_type_by_month$month],levels = month.abb )
 
 # crimes by year
-crimesByYear <- 
-  crimeData %>% 
+crimes_by_year <- 
+  crime_dat %>% 
   select( year ) %>%   
   filter( year != 2015 ) %>%  
   filter( !is.na( year ) ) %>% 
@@ -218,12 +231,12 @@ crimesByYear <-
   summarize( counts = n() ) 
 
 # yearly count of crimes by type
-crimesByTypeByYear <-
-  crimeData %>% 
-  select( year, crime.type ) %>%   
+crimes_by_type_by_year <-
+  crime_dat %>% 
+  select( year, crime_type ) %>%   
   filter( year != 2015 ) %>%  
   filter( !is.na( year ) ) %>% 
-  group_by( year, crime.type ) %>% 
+  group_by( year, crime_type ) %>% 
   summarize( counts = n() )
 
 
@@ -243,44 +256,44 @@ Now we want to create objects that capture the rates.
 # crimes divided by the population size, then multiplied by 100,000
 
 # calculate the crime rate by month
-crimeRatesMonth <- as.data.frame( crimesByMonth )
+crime_rates_month <- as.data.frame( crimes_by_month )
 
-for ( i in 1: dim( crimeRatesMonth )[2] ){
-  crimeRatesMonth[,i] <- ( crimeRatesMonth[,i] / phoenixPopDat[i,2] ) * 100000
+for ( i in 1: dim( crime_rates_month )[2] ){
+  crime_rates_month[,i] <- ( crime_rates_month[,i] / phoenixPopDat[i,2] ) * 100000
 }
 
 # calculate the crime rate by year
-crimeRatesYear <- as.data.frame( crimesByYear )
+crime_rates_year <- as.data.frame( crimes_by_year )
 
-for ( i in 1: dim( crimeRatesYear )[1] ){
-  crimeRatesYear[i,2] <- ( crimeRatesYear[i,2] / phoenixPopDat[i,2] ) * 100000
+for ( i in 1: dim( crime_rates_year )[1] ){
+  crime_rates_year[i,2] <- ( crime_rates_year[i,2] / phoenixPopDat[i,2] ) * 100000
 }
 
 # rename the counts column to be rates
-crimeRatesYear <- crimeRatesYear %>%  rename( rates = counts )
+crime_rates_year <- crime_rates_year %>%  rename( rates = counts )
 
 
 # calculate rates for types by month
-crimeRatesMonthType <- as.data.frame( crimesByTypeByMonth )
+crime_rates_month_type <- as.data.frame( crimes_by_type_by_month )
 
 # assign the population data
-crimeRatesMonthType <- crimeRatesMonthType %>%
+crime_rates_month_type <- crime_rates_month_type %>%
   left_join( phoenixPopDat, by = "year" )
 
 # create the rates
-crimeRatesMonthType <- crimeRatesMonthType %>% 
+crime_rates_month_type <- crime_rates_month_type %>% 
   mutate( rates = ( ( counts / population ) * 100000 ) )
 
 
 # calculate rates for types by year
-crimeRatesYearType <- as.data.frame( crimesByTypeByYear )
+crime_rates_year_type <- as.data.frame( crimes_by_type_by_year )
 
 # assign the population data
-crimeRatesYearType <- crimeRatesYearType %>%
+crime_rates_year_type <- crime_rates_year_type %>%
   left_join( phoenixPopDat, by = "year" )
 
 # create the rates
-crimeRatesYearType <- crimeRatesYearType %>% 
+crime_rates_year_type <- crime_rates_year_type %>% 
   mutate( rates = ( ( counts / population ) * 100000 ) )
 
 ```
@@ -297,18 +310,18 @@ We can now save the objects as a file that can be referenced for analysis on sep
 
 # save the objects as .rds files
 
-saveRDS( crimeData,       file = here( "data/crimeData.rds" ) )
-saveRDS( crimesByDay,     file = here( "data/crimesByDay.rds" ) )
-saveRDS( crimesByMonth,   file = here( "data/crimesByMonth.rds" ) )
-saveRDS( crimesByYear,    file = here( "data/crimesByYear.rds" ) )
-saveRDS( crimeRatesMonth, file = here( "data/crimeRatesMonth.rds" ) )
-saveRDS( crimeRatesYear,  file = here( "data/crimeRatesYear.rds" ) )
+saveRDS( crime_dat,         file = here( "data/crime_dat.rds" ) )
+saveRDS( crimes_by_day,     file = here( "data/crimes_by_day.rds" ) )
+saveRDS( crimes_by_month,   file = here( "data/crimes_by_month.rds" ) )
+saveRDS( crimes_by_year,    file = here( "data/crimes_by_year.rds" ) )
+saveRDS( crime_rates_month, file = here( "data/crime_rates_month.rds" ) )
+saveRDS( crime_rates_year,  file = here( "data/crime_rates_year.rds" ) )
 
 # crimes by type
-saveRDS( crimesByTypeByMonth, file = here( "data/crimesByTypeByMonth.rds" ) )
-saveRDS( crimesByTypeByYear , file = here( "data/crimesByTypeByYear.rds" ) )
-saveRDS( crimeRatesMonthType, file = here( "data/crimeRatesMonthType.rds" ) )
-saveRDS( crimeRatesYearType , file = here( "data/crimeRatesMonthYear.rds" ) )
+saveRDS( crimes_by_type_by_month, file = here( "data/crimes_by_type_by_month.rds" ) )
+saveRDS( crimes_by_type_by_year , file = here( "data/crimes_by_type_by_year.rds" ) )
+saveRDS( crime_rates_month_type,  file = here( "data/crime_rates_month_type.rds" ) )
+saveRDS( crime_rates_year_type ,  file = here( "data/crime_rates_monthYear.rds" ) )
 
 
 ```
