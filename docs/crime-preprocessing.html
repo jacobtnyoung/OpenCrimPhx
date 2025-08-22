@@ -472,6 +472,19 @@ crimes_by_type_by_month &lt;-
 crimes_by_type_by_month$month &lt;-factor( crimes_by_type_by_month$month,levels = month.name )
 crimes_by_type_by_month$month &lt;-factor( month.abb[crimes_by_type_by_month$month],levels = month.abb )
 
+# monthly count of violent/nonviolent crimes by type
+crimes_by_vnv_by_month &lt;-
+  crime_dat %&gt;% 
+  select( year, month, crime_vnv ) %&gt;%   
+  filter( year != 2015 ) %&gt;%  
+  filter( !is.na( year ) ) %&gt;% 
+  group_by( year, month, crime_vnv ) %&gt;% 
+  summarize( counts = n() ) %&gt;% 
+  arrange( match( month, month.name ) ) %&gt;% 
+  select( !month )
+crimes_by_vnv_by_month$month &lt;-factor( crimes_by_vnv_by_month$month,levels = month.name )
+crimes_by_vnv_by_month$month &lt;-factor( month.abb[crimes_by_vnv_by_month$month],levels = month.abb )
+
 # crimes by year
 crimes_by_year &lt;- 
   crime_dat %&gt;% 
@@ -488,6 +501,15 @@ crimes_by_type_by_year &lt;-
   filter( year != 2015 ) %&gt;%  
   filter( !is.na( year ) ) %&gt;% 
   group_by( year, crime_type ) %&gt;% 
+  summarize( counts = n() )
+
+# yearly count of crimes by type
+crimes_by_vnv_by_year &lt;-
+  crime_dat %&gt;% 
+  select( year, crime_vnv ) %&gt;%   
+  filter( year != 2015 ) %&gt;%  
+  filter( !is.na( year ) ) %&gt;% 
+  group_by( year, crime_vnv ) %&gt;% 
   summarize( counts = n() )</code></pre>
 <p><br></p>
 </div>
@@ -528,6 +550,18 @@ crime_rates_month_type &lt;- crime_rates_month_type %&gt;%
   mutate( rates = ( ( counts / population ) * 100000 ) )
 
 
+# calculate rates for violent/nonviolent by month
+crime_rates_month_vnv &lt;- as.data.frame( crimes_by_vnv_by_month )
+
+# assign the population data
+crime_rates_month_vnv &lt;- crime_rates_month_vnv %&gt;%
+  left_join( phoenixPopDat, by = &quot;year&quot; )
+
+# create the rates
+crime_rates_month_vnv &lt;- crime_rates_month_vnv %&gt;% 
+  mutate( rates = ( ( counts / population ) * 100000 ) )
+
+
 # calculate rates for types by year
 crime_rates_year_type &lt;- as.data.frame( crimes_by_type_by_year )
 
@@ -537,6 +571,18 @@ crime_rates_year_type &lt;- crime_rates_year_type %&gt;%
 
 # create the rates
 crime_rates_year_type &lt;- crime_rates_year_type %&gt;% 
+  mutate( rates = ( ( counts / population ) * 100000 ) )
+
+
+# calculate rates for violent/nonviolent by year
+crime_rates_year_vnv &lt;- as.data.frame( crimes_by_vnv_by_year )
+
+# assign the population data
+crime_rates_year_vnv &lt;- crime_rates_year_vnv %&gt;%
+  left_join( phoenixPopDat, by = &quot;year&quot; )
+
+# create the rates
+crime_rates_year_vnv &lt;- crime_rates_year_vnv %&gt;% 
   mutate( rates = ( ( counts / population ) * 100000 ) )</code></pre>
 <p><br><br></p>
 </div>
@@ -558,8 +604,12 @@ saveRDS( crime_rates_year,  file = here( &quot;data/crime_rates_year.rds&quot; )
 # crimes by type
 saveRDS( crimes_by_type_by_month, file = here( &quot;data/crimes_by_type_by_month.rds&quot; ) )
 saveRDS( crimes_by_type_by_year , file = here( &quot;data/crimes_by_type_by_year.rds&quot; ) )
-saveRDS( crime_rates_month_type,  file = here( &quot;data/crime_rates_month_type.rds&quot; ) )
-saveRDS( crime_rates_year_type ,  file = here( &quot;data/crime_rates_year_type.rds&quot; ) )</code></pre>
+saveRDS( crime_rates_month_type ,  file = here( &quot;data/crime_rates_month_type.rds&quot; ) )
+saveRDS( crime_rates_year_type  ,  file = here( &quot;data/crime_rates_year_type.rds&quot; ) )
+saveRDS( crimes_by_vnv_by_month , file = here( &quot;data/crimes_by_vnv_by_month.rds&quot; ) )
+saveRDS( crimes_by_vnv_by_year  , file = here( &quot;data/crimes_by_vnv_by_year.rds&quot; ) )
+saveRDS( crime_rates_month_vnv  ,  file = here( &quot;data/crime_rates_month_vnv.rds&quot; ) )
+saveRDS( crime_rates_year_vnv   ,  file = here( &quot;data/crime_rates_year_vnv.rds&quot; ) )</code></pre>
 <p>If you look in the <a
 href="https://jacobtnyoung.github.io/OpenCrimPhx/data">data</a> folder
 for the repository, you will see that these files have been added. When

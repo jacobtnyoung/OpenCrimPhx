@@ -221,6 +221,19 @@ crimes_by_type_by_month <-
 crimes_by_type_by_month$month <-factor( crimes_by_type_by_month$month,levels = month.name )
 crimes_by_type_by_month$month <-factor( month.abb[crimes_by_type_by_month$month],levels = month.abb )
 
+# monthly count of violent/nonviolent crimes by type
+crimes_by_vnv_by_month <-
+  crime_dat %>% 
+  select( year, month, crime_vnv ) %>%   
+  filter( year != 2015 ) %>%  
+  filter( !is.na( year ) ) %>% 
+  group_by( year, month, crime_vnv ) %>% 
+  summarize( counts = n() ) %>% 
+  arrange( match( month, month.name ) ) %>% 
+  select( !month )
+crimes_by_vnv_by_month$month <-factor( crimes_by_vnv_by_month$month,levels = month.name )
+crimes_by_vnv_by_month$month <-factor( month.abb[crimes_by_vnv_by_month$month],levels = month.abb )
+
 # crimes by year
 crimes_by_year <- 
   crime_dat %>% 
@@ -238,6 +251,16 @@ crimes_by_type_by_year <-
   filter( !is.na( year ) ) %>% 
   group_by( year, crime_type ) %>% 
   summarize( counts = n() )
+
+# yearly count of crimes by type
+crimes_by_vnv_by_year <-
+  crime_dat %>% 
+  select( year, crime_vnv ) %>%   
+  filter( year != 2015 ) %>%  
+  filter( !is.na( year ) ) %>% 
+  group_by( year, crime_vnv ) %>% 
+  summarize( counts = n() )
+
 
 
 ```
@@ -285,6 +308,18 @@ crime_rates_month_type <- crime_rates_month_type %>%
   mutate( rates = ( ( counts / population ) * 100000 ) )
 
 
+# calculate rates for violent/nonviolent by month
+crime_rates_month_vnv <- as.data.frame( crimes_by_vnv_by_month )
+
+# assign the population data
+crime_rates_month_vnv <- crime_rates_month_vnv %>%
+  left_join( phoenixPopDat, by = "year" )
+
+# create the rates
+crime_rates_month_vnv <- crime_rates_month_vnv %>% 
+  mutate( rates = ( ( counts / population ) * 100000 ) )
+
+
 # calculate rates for types by year
 crime_rates_year_type <- as.data.frame( crimes_by_type_by_year )
 
@@ -295,6 +330,19 @@ crime_rates_year_type <- crime_rates_year_type %>%
 # create the rates
 crime_rates_year_type <- crime_rates_year_type %>% 
   mutate( rates = ( ( counts / population ) * 100000 ) )
+
+
+# calculate rates for violent/nonviolent by year
+crime_rates_year_vnv <- as.data.frame( crimes_by_vnv_by_year )
+
+# assign the population data
+crime_rates_year_vnv <- crime_rates_year_vnv %>%
+  left_join( phoenixPopDat, by = "year" )
+
+# create the rates
+crime_rates_year_vnv <- crime_rates_year_vnv %>% 
+  mutate( rates = ( ( counts / population ) * 100000 ) )
+
 
 ```
 
@@ -320,9 +368,12 @@ saveRDS( crime_rates_year,  file = here( "data/crime_rates_year.rds" ) )
 # crimes by type
 saveRDS( crimes_by_type_by_month, file = here( "data/crimes_by_type_by_month.rds" ) )
 saveRDS( crimes_by_type_by_year , file = here( "data/crimes_by_type_by_year.rds" ) )
-saveRDS( crime_rates_month_type,  file = here( "data/crime_rates_month_type.rds" ) )
-saveRDS( crime_rates_year_type ,  file = here( "data/crime_rates_year_type.rds" ) )
-
+saveRDS( crime_rates_month_type ,  file = here( "data/crime_rates_month_type.rds" ) )
+saveRDS( crime_rates_year_type  ,  file = here( "data/crime_rates_year_type.rds" ) )
+saveRDS( crimes_by_vnv_by_month , file = here( "data/crimes_by_vnv_by_month.rds" ) )
+saveRDS( crimes_by_vnv_by_year  , file = here( "data/crimes_by_vnv_by_year.rds" ) )
+saveRDS( crime_rates_month_vnv  ,  file = here( "data/crime_rates_month_vnv.rds" ) )
+saveRDS( crime_rates_year_vnv   ,  file = here( "data/crime_rates_year_vnv.rds" ) )
 
 ```
 
