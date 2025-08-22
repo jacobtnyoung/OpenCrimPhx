@@ -57,14 +57,14 @@ library( viridis )  # for some coloring used in the plots
  
 
 # define the objects
-crimeData       <- readRDS( here( "data/crimeData.rds" ) )
-crimesByDay     <- readRDS( here( "data/crimesByDay.rds" ) )
-crimesByMonth   <- readRDS( here( "data/crimesByMonth.rds" ) )
-crimesByYear    <- readRDS( here( "data/crimesByYear.rds" ) )
-crimeRatesMonth <- readRDS( here( "data/crimeRatesMonth.rds" ) )
-crimeRatesYear  <- readRDS( here( "data/crimeRatesYear.rds" ) )
+crime_dat       <- readRDS( here( "data/crime_dat.rds" ) )
+crimes_by_day     <- readRDS( here( "data/crimes_by_day.rds" ) )
+crimes_by_month   <- readRDS( here( "data/crimes_by_month.rds" ) )
+crimes_by_year    <- readRDS( here( "data/crimes_by_year.rds" ) )
+crime_rates_month <- readRDS( here( "data/crime_rates_month.rds" ) )
+crime_rates_year  <- readRDS( here( "data/crime_rates_year.rds" ) )
 
-crimeRatesMonthType  <- readRDS( here( "data/crimeRatesMonthType.rds" ) )
+crime_rates_month_type  <- readRDS( here( "data/crime_rates_month_type.rds" ) )
 
 ```
 
@@ -76,7 +76,7 @@ crimeRatesMonthType  <- readRDS( here( "data/crimeRatesMonthType.rds" ) )
 
 Let's pull the most recent data for **crime incidents** from the site.
 
-The data are reported as UCR crime classifications and have geographic information (block address, zip) as well as the date and time of the incident. As of `r format( Sys.time(), '%B, %Y' )`, there were `r comma( dim( crimeData )[1] )` crime incidents with complete data from 11/2015 to within a week of the current date.   
+The data are reported as UCR crime classifications and have geographic information (block address, zip) as well as the date and time of the incident. As of `r format( Sys.time(), '%B, %Y' )`, there were `r comma( dim( crime_dat )[1] )` crime incidents with complete data from 11/2015 to within a week of the current date.   
 
 Let's start by looking at the daily counts of crime from when the data are first available (i.e. November 2015) and look at the trend up to the current date. In the analyses below, we will drop the most recent month as the data are not complete for that month.
 
@@ -84,7 +84,7 @@ Let's start by looking at the daily counts of crime from when the data are first
 
 ```{r}
 
-crimesByDay %>% 
+crimes_by_day %>% 
   ggplot( aes( days, counts ) ) +
   geom_line( color = "grey80" ) +
   geom_point( alpha = 1/5, color = "black" ) +
@@ -115,18 +115,18 @@ The daily count view is useful, but it might help if we make two changes:
 ```{r}
 
 # create a time series object for plotting
-monthlyCrimeRateByYear <- ts(
-  matrix( as.matrix( crimeRatesMonth ), ncol = 1 ), 
+monthly_crime_rate_by_year <- ts(
+  matrix( as.matrix( crime_rates_month ), ncol = 1 ), 
   start=c( 2016, 1 ), 
-  end=c( as.numeric( tail( names( crimeRatesMonth ), n=1 ) ), 12 ), frequency=12
+  end=c( as.numeric( tail( names( crime_rates_month ), n=1 ) ), 12 ), frequency=12
 )
 
 # render the plot
-monthlyCrimeRateByYear %>%
+monthly_crime_rate_by_year %>%
   ggseasonplot(
     year.labels = TRUE,
     continuous = FALSE,
-    col = viridis( n = dim(crimeRatesMonth)[2], option = "cividis" ) ) +
+    col = viridis( n = dim(crime_rates_month)[2], option = "cividis" ) ) +
   scale_y_continuous( labels = comma ) +
   geom_line( size = 1.5, alpha = 0.7 ) +
   geom_point( size = 2, shape = 21, fill = "white", color = "black" ) + 
@@ -149,7 +149,7 @@ The plot showing the monthly rates by year helps us visualize the data better. N
 
 ```{r}
 
-crimeRatesYear %>%
+crime_rates_year %>%
   # drop the current year because it distorts the graph
   filter( year != as.numeric( format( Sys.Date(), format="%Y" ) ) ) %>%
   ggplot( aes( year, rates, group = 1 ) ) +
@@ -171,7 +171,7 @@ crimeRatesYear %>%
 
 # Fit an ARIMA model with seasonal components
 fit <- auto.arima( 
-  monthlyCrimeRateByYear, 
+  monthly_crime_rate_by_year, 
   seasonal = TRUE, 
   stepwise = FALSE, 
   approximation = FALSE 
@@ -182,8 +182,8 @@ forecasted_values <- forecast( fit, h = 12 )
 
 # Convert time series to a data frame for ggplot
 actual_data <- data.frame(
-  ds = time( monthlyCrimeRateByYear ),
-  y = as.numeric( monthlyCrimeRateByYear )
+  ds = time( monthly_crime_rate_by_year ),
+  y = as.numeric( monthly_crime_rate_by_year )
 )
 forecast_data <- data.frame(
   ds = time( forecasted_values$mean ),
@@ -201,7 +201,7 @@ ggplot() +
        x = "",
        y = "Crime Rate" ) +
   scale_x_continuous(
-    breaks = seq( min( crimeRatesYear$year ), max( crimeRatesYear$year ), by = 1 ),
+    breaks = seq( min( crime_rates_year$year ), max( crime_rates_year$year ), by = 1 ),
     labels = as.character
   ) +
   theme_minimal()
@@ -224,11 +224,11 @@ ggplot() +
 
 ```{r}
 
-crimeRatesMonthType %>% 
+crime_rates_month_type %>% 
   ggplot( aes( month, rates, group = 1 ) ) +
   geom_line( color = "grey40" ) +
   geom_point( alpha = 2/5, color = "#751913" ) +
-  facet_grid( crime.type ~ year, scales="free" ) +
+  facet_grid( crime_type ~ year, scales="free" ) +
   theme( axis.text.x=element_blank(), 
          strip.text.x = element_text( size = 15 ),
          strip.text.y = element_text( size = 12 ) ) +
@@ -242,20 +242,7 @@ crimeRatesMonthType %>%
 
 ```{r}
 
-###HERE:
-
-# These rates have to be recalculated; probably just go back and rebuild this in the main file?
-
-# create the augmented data set
-crimeRatesMonthTypeVnV <- crimeRatesMonthType |> 
-  mutate(
-    crime.type = case_when(
-      crime.type %in% c("Assault", "Homicide", "Rape", "Robbery") ~ "violent",
-      crime.type %in% c("Arson", "Burglary", "Drugs", "MV Theft", "Theft") ~ "non-violent",
-      TRUE ~ crime.type  # keep original if it doesn't match
-    )
-    
-  )
+###HERE: Need to have this aggregate over the correct types
 
 ```
 

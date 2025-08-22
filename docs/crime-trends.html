@@ -280,7 +280,7 @@ $(document).ready(function () {
 
 <h1 class="title toc-ignore">What is going on with crime in
 Phoenix?</h1>
-<h4 class="date">13 August, 2025</h4>
+<h4 class="date">22 August, 2025</h4>
 
 </div>
 
@@ -330,14 +330,14 @@ library( viridis )  # for some coloring used in the plots
  
 
 # define the objects
-crimeData       &lt;- readRDS( here( &quot;data/crimeData.rds&quot; ) )
-crimesByDay     &lt;- readRDS( here( &quot;data/crimesByDay.rds&quot; ) )
-crimesByMonth   &lt;- readRDS( here( &quot;data/crimesByMonth.rds&quot; ) )
-crimesByYear    &lt;- readRDS( here( &quot;data/crimesByYear.rds&quot; ) )
-crimeRatesMonth &lt;- readRDS( here( &quot;data/crimeRatesMonth.rds&quot; ) )
-crimeRatesYear  &lt;- readRDS( here( &quot;data/crimeRatesYear.rds&quot; ) )
+crime_dat       &lt;- readRDS( here( &quot;data/crime_dat.rds&quot; ) )
+crimes_by_day     &lt;- readRDS( here( &quot;data/crimes_by_day.rds&quot; ) )
+crimes_by_month   &lt;- readRDS( here( &quot;data/crimes_by_month.rds&quot; ) )
+crimes_by_year    &lt;- readRDS( here( &quot;data/crimes_by_year.rds&quot; ) )
+crime_rates_month &lt;- readRDS( here( &quot;data/crime_rates_month.rds&quot; ) )
+crime_rates_year  &lt;- readRDS( here( &quot;data/crime_rates_year.rds&quot; ) )
 
-crimeRatesMonthType  &lt;- readRDS( here( &quot;data/crimeRatesMonthType.rds&quot; ) )</code></pre>
+crime_rates_month_type  &lt;- readRDS( here( &quot;data/crime_rates_month_type.rds&quot; ) )</code></pre>
 <p><br></p>
 <div id="daily-trends-in-crime-from-2016-to-present"
 class="section level3">
@@ -347,7 +347,7 @@ class="section level3">
 from the site.</p>
 <p>The data are reported as UCR crime classifications and have
 geographic information (block address, zip) as well as the date and time
-of the incident. As of August, 2025, there were 590,826 crime incidents
+of the incident. As of August, 2025, there were 590,891 crime incidents
 with complete data from 11/2015 to within a week of the current
 date.</p>
 <p>Let’s start by looking at the daily counts of crime from when the
@@ -355,7 +355,7 @@ data are first available (i.e. November 2015) and look at the trend up
 to the current date. In the analyses below, we will drop the most recent
 month as the data are not complete for that month.</p>
 <p><br></p>
-<pre class="r"><code>crimesByDay %&gt;% 
+<pre class="r"><code>crimes_by_day %&gt;% 
   ggplot( aes( days, counts ) ) +
   geom_line( color = &quot;grey80&quot; ) +
   geom_point( alpha = 1/5, color = &quot;black&quot; ) +
@@ -393,18 +393,18 @@ calculated.</p></li>
 class="section level4">
 <h4>Rates of Crime by Month from 2016 to Present</h4>
 <pre class="r"><code># create a time series object for plotting
-monthlyCrimeRateByYear &lt;- ts(
-  matrix( as.matrix( crimeRatesMonth ), ncol = 1 ), 
+monthly_crime_rate_by_year &lt;- ts(
+  matrix( as.matrix( crime_rates_month ), ncol = 1 ), 
   start=c( 2016, 1 ), 
-  end=c( as.numeric( tail( names( crimeRatesMonth ), n=1 ) ), 12 ), frequency=12
+  end=c( as.numeric( tail( names( crime_rates_month ), n=1 ) ), 12 ), frequency=12
 )
 
 # render the plot
-monthlyCrimeRateByYear %&gt;%
+monthly_crime_rate_by_year %&gt;%
   ggseasonplot(
     year.labels = TRUE,
     continuous = FALSE,
-    col = viridis( n = dim(crimeRatesMonth)[2], option = &quot;cividis&quot; ) ) +
+    col = viridis( n = dim(crime_rates_month)[2], option = &quot;cividis&quot; ) ) +
   scale_y_continuous( labels = comma ) +
   geom_line( size = 1.5, alpha = 0.7 ) +
   geom_point( size = 2, shape = 21, fill = &quot;white&quot;, color = &quot;black&quot; ) + 
@@ -423,7 +423,7 @@ because the year is incomplete.</p>
 class="section level4">
 <h4>Rates of Crime by Year from 2016 to Present</h4>
 <p><br></p>
-<pre class="r"><code>crimeRatesYear %&gt;%
+<pre class="r"><code>crime_rates_year %&gt;%
   # drop the current year because it distorts the graph
   filter( year != as.numeric( format( Sys.Date(), format=&quot;%Y&quot; ) ) ) %&gt;%
   ggplot( aes( year, rates, group = 1 ) ) +
@@ -444,7 +444,7 @@ class="section level4">
 Trend</h4>
 <pre class="r"><code># Fit an ARIMA model with seasonal components
 fit &lt;- auto.arima( 
-  monthlyCrimeRateByYear, 
+  monthly_crime_rate_by_year, 
   seasonal = TRUE, 
   stepwise = FALSE, 
   approximation = FALSE 
@@ -455,8 +455,8 @@ forecasted_values &lt;- forecast( fit, h = 12 )
 
 # Convert time series to a data frame for ggplot
 actual_data &lt;- data.frame(
-  ds = time( monthlyCrimeRateByYear ),
-  y = as.numeric( monthlyCrimeRateByYear )
+  ds = time( monthly_crime_rate_by_year ),
+  y = as.numeric( monthly_crime_rate_by_year )
 )
 forecast_data &lt;- data.frame(
   ds = time( forecasted_values$mean ),
@@ -474,7 +474,7 @@ ggplot() +
        x = &quot;&quot;,
        y = &quot;Crime Rate&quot; ) +
   scale_x_continuous(
-    breaks = seq( min( crimeRatesYear$year ), max( crimeRatesYear$year ), by = 1 ),
+    breaks = seq( min( crime_rates_year$year ), max( crime_rates_year$year ), by = 1 ),
     labels = as.character
   ) +
   theme_minimal()</code></pre>
@@ -492,16 +492,24 @@ ggplot() +
 class="section level3">
 <h3>Rates of Crime by Type of Crime and Month from 2016 to Present</h3>
 <p><br></p>
-<pre class="r"><code>crimeRatesMonthType %&gt;% 
+<pre class="r"><code>crime_rates_month_type %&gt;% 
   ggplot( aes( month, rates, group = 1 ) ) +
   geom_line( color = &quot;grey40&quot; ) +
   geom_point( alpha = 2/5, color = &quot;#751913&quot; ) +
-  facet_grid( crime.type ~ year, scales=&quot;free&quot; ) +
+  facet_grid( crime_type ~ year, scales=&quot;free&quot; ) +
   theme( axis.text.x=element_blank(), 
          strip.text.x = element_text( size = 15 ),
          strip.text.y = element_text( size = 12 ) ) +
   xlab( &quot;Month&quot; )</code></pre>
 <p><img src="crime-trends_files/figure-html/unnamed-chunk-6-1.png" width="1152" /></p>
+</div>
+<div
+id="rates-of-crime-by-violent-or-non-violent-and-month-from-2016-to-present"
+class="section level3">
+<h3>Rates of Crime by Violent or Non-Violent and Month from 2016 to
+Present</h3>
+<p><br></p>
+<pre class="r"><code>###HERE: Need to have this aggregate over the correct types</code></pre>
 <p><br></p>
 <hr />
 <p align="center">
@@ -514,8 +522,8 @@ Criminology Phoenix page</a>
 href="https://github.com/jacobtnyoung/OpenCrimPhx/issues/new">Issues</a>
 page. Thanks!</p>
 <p><br><br></p>
-<div id="last-updated-13-august-2025" class="section level6">
-<h6><strong><em>Last updated 13 August, 2025</em></strong></h6>
+<div id="last-updated-22-august-2025" class="section level6">
+<h6><strong><em>Last updated 22 August, 2025</em></strong></h6>
 </div>
 </div>
 </div>
