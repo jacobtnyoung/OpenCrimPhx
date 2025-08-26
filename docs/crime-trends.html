@@ -280,7 +280,7 @@ $(document).ready(function () {
 
 <h1 class="title toc-ignore">What is going on with crime in
 Phoenix?</h1>
-<h4 class="date">22 August, 2025</h4>
+<h4 class="date">26 August, 2025</h4>
 
 </div>
 
@@ -337,7 +337,9 @@ crimes_by_year    &lt;- readRDS( here( &quot;data/crimes_by_year.rds&quot; ) )
 crime_rates_month &lt;- readRDS( here( &quot;data/crime_rates_month.rds&quot; ) )
 crime_rates_year  &lt;- readRDS( here( &quot;data/crime_rates_year.rds&quot; ) )
 
-crime_rates_month_type  &lt;- readRDS( here( &quot;data/crime_rates_month_type.rds&quot; ) )</code></pre>
+# objects built by type
+crime_rates_month_type  &lt;- readRDS( here( &quot;data/crime_rates_month_type.rds&quot; ) )
+crime_rates_month_vnv   &lt;- readRDS( here( &quot;data/crime_rates_month_vnv.rds&quot; ) )</code></pre>
 <p><br></p>
 <div id="daily-trends-in-crime-from-2016-to-present"
 class="section level3">
@@ -509,7 +511,21 @@ class="section level3">
 <h3>Rates of Crime by Violent or Non-Violent and Month from 2016 to
 Present</h3>
 <p><br></p>
-<pre class="r"><code>###HERE: Need to have this aggregate over the correct types</code></pre>
+<p>The plot below separates the crime types into the standard definition
+of <em>violent</em> (i.e. assault, homicide, rape, and robbery) and
+<em>non-violent</em> crime (arson, burglary, drug offenses, and theft).
+As you look through the plot, keep in mind that <em>non-volent</em>
+crime accounts for 85% of all reported crime in the data.</p>
+<pre class="r"><code>crime_rates_month_vnv %&gt;% 
+  ggplot( aes( month, rates, group = 1 ) ) +
+  geom_line( color = &quot;grey40&quot; ) +
+  geom_point( alpha = 2/5, color = &quot;#751913&quot; ) +
+  facet_grid( crime_vnv ~ year, scales=&quot;free&quot; ) +
+  theme( axis.text.x=element_blank(), 
+         strip.text.x = element_text( size = 15 ),
+         strip.text.y = element_text( size = 12 ) ) +
+  xlab( &quot;Month&quot; )</code></pre>
+<p><img src="crime-trends_files/figure-html/unnamed-chunk-7-1.png" width="1152" /></p>
 <p><br></p>
 <hr />
 <p align="center">
@@ -522,8 +538,8 @@ Criminology Phoenix page</a>
 href="https://github.com/jacobtnyoung/OpenCrimPhx/issues/new">Issues</a>
 page. Thanks!</p>
 <p><br><br></p>
-<div id="last-updated-22-august-2025" class="section level6">
-<h6><strong><em>Last updated 22 August, 2025</em></strong></h6>
+<div id="last-updated-26-august-2025" class="section level6">
+<h6><strong><em>Last updated 26 August, 2025</em></strong></h6>
 </div>
 </div>
 </div>

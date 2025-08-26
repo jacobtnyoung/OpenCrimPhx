@@ -64,7 +64,9 @@ crimes_by_year    <- readRDS( here( "data/crimes_by_year.rds" ) )
 crime_rates_month <- readRDS( here( "data/crime_rates_month.rds" ) )
 crime_rates_year  <- readRDS( here( "data/crime_rates_year.rds" ) )
 
+# objects built by type
 crime_rates_month_type  <- readRDS( here( "data/crime_rates_month_type.rds" ) )
+crime_rates_month_vnv   <- readRDS( here( "data/crime_rates_month_vnv.rds" ) )
 
 ```
 
@@ -240,9 +242,19 @@ crime_rates_month_type %>%
 
 <br>
 
+The plot below separates the crime types into the standard definition of *violent* (i.e. assault, homicide, rape, and robbery) and *non-violent* crime (arson, burglary, drug offenses, and theft). As you look through the plot, keep in mind that *non-volent* crime accounts for `r round( ( sum( crime_rates_month_vnv$counts[crime_rates_month_vnv$crime_vnv == "NonViolent"] ) / sum( crime_rates_month_vnv$counts ) ), 2 )*100`% of all reported crime in the data.
+
 ```{r}
 
-###HERE: Need to have this aggregate over the correct types
+crime_rates_month_vnv %>% 
+  ggplot( aes( month, rates, group = 1 ) ) +
+  geom_line( color = "grey40" ) +
+  geom_point( alpha = 2/5, color = "#751913" ) +
+  facet_grid( crime_vnv ~ year, scales="free" ) +
+  theme( axis.text.x=element_blank(), 
+         strip.text.x = element_text( size = 15 ),
+         strip.text.y = element_text( size = 12 ) ) +
+  xlab( "Month" )
 
 ```
 
