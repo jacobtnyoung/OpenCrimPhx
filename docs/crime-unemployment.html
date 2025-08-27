@@ -279,7 +279,7 @@ $(document).ready(function () {
 
 
 <h1 class="title toc-ignore">Crime and Unemployment</h1>
-<h4 class="date">13 August, 2025</h4>
+<h4 class="date">27 August, 2025</h4>
 
 </div>
 
@@ -304,42 +304,36 @@ for the repository.</p>
 rm( list = ls() )
 
 # load libraries
-library( dplyr )    # used for wrangling the data
-library( tidyr )    # used for wrangling the data
-library( ggplot2 )  # for plotting
-library( cowplot )  # for putting the plots together
-library( scales )   # for formatting the text
-library( forecast ) # for working with time series data
-library( here )     # for referencing the local directory
-library( viridis )  # colors for plots below
+library( dplyr )     # used for wrangling the data
+library( tidyr )     # used for wrangling the data
+library( ggplot2 )   # for plotting
+library( cowplot )   # for putting the plots together
+library( scales )    # for formatting the text
+library( forecast )  # for working with time series data
+library( here )      # for referencing the local directory
+library( viridis )   # colors for plots below
+library( blscrapeR ) # for scraping the bls website
 
 
 # define the objects
-crimeData       &lt;- readRDS( here( &quot;data/crimeData.rds&quot; ) )
-crimesByDay     &lt;- readRDS( here( &quot;data/crimesByDay.rds&quot; ) )
-crimesByMonth   &lt;- readRDS( here( &quot;data/crimesByMonth.rds&quot; ) )
-crimesByYear    &lt;- readRDS( here( &quot;data/crimesByYear.rds&quot; ) )
-crimeRatesMonth &lt;- readRDS( here( &quot;data/crimeRatesMonth.rds&quot; ) )
-crimeRatesYear  &lt;- readRDS( here( &quot;data/crimeRatesYear.rds&quot; ) )
+crime_rates_month &lt;- readRDS( here( &quot;data/crime_rates_month.rds&quot; ) )
 
-crimeRatesMonthType  &lt;- readRDS( here( &quot;data/crimeRatesMonthType.rds&quot; ) )</code></pre>
+crime_rates_month_type  &lt;- readRDS( here( &quot;data/crime_rates_month_type.rds&quot; ) )</code></pre>
 <p><br></p>
 </div>
 <div id="loading-the-unemployment-data" class="section level2">
 <h2>Loading the Unemployment Data</h2>
 <p>First, load the unemployment data. This makes a call to the <a
 href="https://www.bls.gov/">Bureau of Labor Statistics</a> API.</p>
-<pre class="r"><code>library( blscrapeR )
-
-series_id &lt;- &quot;LAUMT043806000000003&quot;
+<pre class="r"><code>series_id &lt;- &quot;LAUMT043806000000003&quot;
 
 unemployment_data &lt;- bls_api( 
   series_id, 
-  startyear = head( names( crimeRatesMonth ), n=1 ), 
-  endyear = tail( names( crimeRatesMonth ), n=1 )
+  startyear = head( names( crime_rates_month ), n=1 ), 
+  endyear = tail( names( crime_rates_month ), n=1 )
   )
 
-UnemployByMonth &lt;- 
+unemploy_by_month &lt;- 
   unemployment_data %&gt;% 
   select( year, periodName, value) %&gt;%
   mutate( month = factor( unemployment_data$periodName,levels = month.name ) ) %&gt;% 
@@ -350,18 +344,18 @@ UnemployByMonth &lt;-
   select( !month )</code></pre>
 <p>Now that the object is constructed, we can plot it.</p>
 <pre class="r"><code># create a time series object for plotting
-monthlyUnemploymentRateByYear &lt;- ts(
-  matrix( as.matrix( UnemployByMonth ), ncol = 1 ), 
+monthly_unemployment_rate_year &lt;- ts(
+  matrix( as.matrix( unemploy_by_month ), ncol = 1 ), 
   start=c( 2016, 1 ), 
-  end=c( as.numeric( tail( names( UnemployByMonth ), n=1 ) ), 12 ), frequency=12
+  end=c( as.numeric( tail( names( unemploy_by_month ), n=1 ) ), 12 ), frequency=12
 )
 
 # plot the rates
-monthlyUnemploymentRateByYear %&gt;%
+monthly_unemployment_rate_year %&gt;%
   ggseasonplot(
     year.labels = TRUE,
     continuous = FALSE,
-    col = viridis( n = dim( UnemployByMonth )[2], option = &quot;cividis&quot; ) ) +
+    col = viridis( n = dim( unemploy_by_month )[2], option = &quot;cividis&quot; ) ) +
   scale_y_continuous( labels = comma ) +
   geom_line( size = 1.5, alpha = 0.7 ) +
   geom_point( size = 2, shape = 21, fill = &quot;white&quot;, color = &quot;black&quot; ) + 
@@ -372,26 +366,26 @@ monthlyUnemploymentRateByYear %&gt;%
 <p><img src="crime-unemployment_files/figure-html/unnamed-chunk-3-1.png" width="1152" /></p>
 <p>Now, we can plot unemployment with crime.</p>
 <pre class="r"><code># create a time series object for plotting
-monthlyCrimeRateByYear &lt;- ts(
-  matrix( as.matrix( crimeRatesMonth ), ncol = 1 ), 
+monthly_crime_rate_year &lt;- ts(
+  matrix( as.matrix( crime_rates_month ), ncol = 1 ), 
   start=c( 2016, 1 ), 
-  end=c( as.numeric( tail( names( crimeRatesMonth ), n=1 ) ), 12 ), frequency=12
+  end=c( as.numeric( tail( names( crime_rates_month ), n=1 ) ), 12 ), frequency=12
 )
 
-# drop 2025 from the monthlyCrimeRateByYear object as the 
+# drop 2025 from the monthly_crime_rate_year object as the 
 # unemployment data are not yet available
 
-#monthlyCrimeRateByYear &lt;- window( 
-#  monthlyCrimeRateByYear, 
+#monthly_crime_rate_year &lt;- window( 
+#  monthly_crime_rate_year, 
 #  start = c( 2016, 1 ), 
 #  end = c( 2024, 12 ) )
 
 # render the plot
-crime_seasonplot &lt;- monthlyCrimeRateByYear %&gt;%
+crime_seasonplot &lt;- monthly_crime_rate_year %&gt;%
   ggseasonplot(
     year.labels = TRUE,
     continuous = FALSE,
-    col = viridis( n = dim( crimeRatesMonth )[2], option = &quot;viridis&quot; ) ) +
+    col = viridis( n = dim( crime_rates_month )[2], option = &quot;viridis&quot; ) ) +
   scale_y_continuous( labels = comma ) +
   geom_line( size = 1.5, alpha = 0.7 ) +
   geom_point( size = 2, shape = 21, fill = &quot;white&quot;, color = &quot;black&quot; ) + 
@@ -400,11 +394,11 @@ crime_seasonplot &lt;- monthlyCrimeRateByYear %&gt;%
     subtitle = &quot;Phoenix, AZ&quot; ) +
   theme_minimal()
 
-unemployment_seasonplot &lt;- monthlyUnemploymentRateByYear %&gt;%
+unemployment_seasonplot &lt;- monthly_unemployment_rate_year %&gt;%
   ggseasonplot(
     year.labels = TRUE,
     continuous = FALSE,
-    col = viridis( n = dim( UnemployByMonth )[2], option = &quot;cividis&quot; ) ) +
+    col = viridis( n = dim( unemploy_by_month )[2], option = &quot;cividis&quot; ) ) +
   scale_y_continuous( labels = comma ) +
   geom_line( size = 1.5, alpha = 0.7 ) +
   geom_point( size = 2, shape = 21, fill = &quot;white&quot;, color = &quot;black&quot; ) + 
@@ -419,24 +413,24 @@ print( combined_plot )</code></pre>
 <p><br></p>
 <p>We can rework these to show the trends over time (rather than having
 time stacked).</p>
-<pre class="r"><code>actual_data &lt;- data.frame(
-    dsCrime = time( monthlyCrimeRateByYear ),
-    yCrime = as.numeric( monthlyCrimeRateByYear ),
-    dsUnemp = time( monthlyUnemploymentRateByYear ),
-    yUnemp = as.numeric( monthlyUnemploymentRateByYear )
+<pre class="r"><code>actual_dat &lt;- data.frame(
+    dsCrime = time( monthly_crime_rate_year ),
+    yCrime = as.numeric( monthly_crime_rate_year ),
+    dsUnemp = time( monthly_unemployment_rate_year ),
+    yUnemp = as.numeric( monthly_unemployment_rate_year )
 )
 
 unemp_plot &lt;- 
-  ggplot( data = actual_data, aes( x = dsUnemp, y = yUnemp ) ) +
-  geom_line( color = &quot;#c41104&quot;, size = 1.5, alpha = 0.7 ) +
-  scale_x_continuous( breaks = seq( min( actual_data$dsUnemp) , max( actual_data$dsUnemp ), by = 1 ) ) +
+  ggplot( data = actual_dat, aes( x = dsUnemp, y = yUnemp ) ) +
+  geom_line( color = &quot;#105a82&quot;, size = 1.5, alpha = 0.7 ) +
+  scale_x_continuous( breaks = seq( min( actual_dat$dsUnemp) , max( actual_dat$dsUnemp ), by = 1 ) ) +
   labs( x = &quot;Year&quot;, y = &quot;Unemployment Rate&quot;, color = &quot;Unemployment Rate&quot; ) +
   theme_minimal()
 
 crime_plot &lt;- 
-  ggplot( data = actual_data, aes( x = dsCrime, y = yCrime ) ) +
+  ggplot( data = actual_dat, aes( x = dsCrime, y = yCrime ) ) +
   geom_line( color = &quot;#c41104&quot;, size = 1.5, alpha = 0.7 ) +
-  scale_x_continuous( breaks = seq( min( actual_data$dsCrime) , max( actual_data$dsCrime ), by = 1 ) ) +
+  scale_x_continuous( breaks = seq( min( actual_dat$dsCrime) , max( actual_dat$dsCrime ), by = 1 ) ) +
   labs( x = &quot;Year&quot;, y = &quot;Crime Rate&quot;, color = &quot;Crime Rate&quot; ) +
   theme_minimal()
 
@@ -445,7 +439,7 @@ print( combined_plot )</code></pre>
 <p><img src="crime-unemployment_files/figure-html/unnamed-chunk-5-1.png" width="1152" /></p>
 <p><br></p>
 <p>Now we can examine the correlation between the two, which is
-<strong>0.227</strong>.</p>
+<strong>0.224</strong>.</p>
 <p><br><br></p>
 </div>
 <div id="adjusting-for-2020" class="section level2">
@@ -457,23 +451,23 @@ relationship.</p>
 simply make it missing so that it does not mess up the x-axis labels on
 our plot.</p>
 <pre class="r"><code># filter the data to make 2020 NA.
-actual_data_with_gap &lt;- actual_data %&gt;%
+actual_dat_with_gap &lt;- actual_dat %&gt;%
   mutate(
-    yUnemp = ifelse(as.integer(dsUnemp) == 2020, NA, yUnemp),
-    yCrime = ifelse(as.integer(dsCrime) == 2020, NA, yCrime)
+    yUnemp = ifelse( as.integer( dsUnemp ) == 2020, NA, yUnemp ),
+    yCrime = ifelse( as.integer( dsCrime ) == 2020, NA, yCrime )
   )
 
 unemp_plot &lt;- 
-  ggplot( data = actual_data_with_gap, aes( x = dsUnemp, y = yUnemp ) ) +
-  geom_line( color = &quot;#c41104&quot;, size = 1.5, alpha = 0.7 ) +
-  scale_x_continuous( breaks = seq( min( actual_data$dsUnemp) , max( actual_data$dsUnemp ), by = 1 ) ) +
+  ggplot( data = actual_dat_with_gap, aes( x = dsUnemp, y = yUnemp ) ) +
+  geom_line( color = &quot;#105a82&quot;, size = 1.5, alpha = 0.7 ) +
+  scale_x_continuous( breaks = seq( min( actual_dat$dsUnemp ) , max( actual_dat$dsUnemp ), by = 1 ) ) +
   labs( x = &quot;Year&quot;, y = &quot;Unemployment Rate&quot;, color = &quot;Unemployment Rate&quot; ) +
   theme_minimal()
 
 crime_plot &lt;- 
-  ggplot( data = actual_data_with_gap, aes( x = dsCrime, y = yCrime ) ) +
+  ggplot( data = actual_dat_with_gap, aes( x = dsCrime, y = yCrime ) ) +
   geom_line( color = &quot;#c41104&quot;, size = 1.5, alpha = 0.7 ) +
-  scale_x_continuous( breaks = seq( min( actual_data$dsCrime) , max( actual_data$dsCrime ), by = 1 ) ) +
+  scale_x_continuous( breaks = seq( min( actual_dat$dsCrime ) , max( actual_dat$dsCrime ), by = 1 ) ) +
   labs( x = &quot;Year&quot;, y = &quot;Crime Rate&quot;, color = &quot;Crime Rate&quot; ) +
   theme_minimal()
 
@@ -482,7 +476,7 @@ print( combined_plot )</code></pre>
 <p><img src="crime-unemployment_files/figure-html/unnamed-chunk-6-1.png" width="1152" /></p>
 <p><br></p>
 <p>Now we can examine the correlation between the two, which is
-<strong>0.483</strong>. That looks more appropriate. Or, it shows how
+<strong>0.466</strong>. That looks more appropriate. Or, it shows how
 sensitive the interpretation is to the inclusion of the data from
 2020.</p>
 <p><br><br></p>
@@ -496,7 +490,7 @@ Might the relationship vary?</p>
 <p>First, we need to rework the unemployment data to merge it with the
 monthly crime data.</p>
 <pre class="r"><code># convert unemployment matrix to a data frame
-unemploy_long &lt;- as.data.frame( as.table( as.matrix( UnemployByMonth ) ) )
+unemploy_long &lt;- as.data.frame( as.table( as.matrix( unemploy_by_month ) ) )
 
 # rename the columns for clarity
 colnames( unemploy_long ) &lt;- c( &quot;month&quot;, &quot;year&quot;, &quot;u_rate&quot; )
@@ -508,16 +502,16 @@ unemploy_long$month &lt;- month.abb[unemploy_long$month]
 unemploy_long$year &lt;- as.character( unemploy_long$year )
 #unemploy_long$year &lt;- as.numeric( as.character( unemploy_long$year ) )</code></pre>
 <p>Now, we can merge these data to the monthly crime type data.</p>
-<pre class="r"><code>crimeRatesMonthTypeUnemp &lt;- crimeRatesMonthType %&gt;%
+<pre class="r"><code>crime_rates_month_type_unemp &lt;- crime_rates_month_type %&gt;%
   left_join( unemploy_long, by = c( &quot;year&quot;, &quot;month&quot; ) )</code></pre>
 <p>Now we can plot it.</p>
-<pre class="r"><code>crimeRatesMonthTypeUnemp %&gt;% 
+<pre class="r"><code>crime_rates_month_type_unemp %&gt;% 
   ggplot( aes( month, rates, group = 1 ) ) +
   geom_line( color = &quot;grey40&quot; ) +
   geom_point( alpha = 2/5, color = &quot;#751913&quot; ) +
   geom_line( aes( y = u_rate ), color = &quot;#105a82&quot; ) +
   geom_point( aes( y = u_rate ), alpha = 2/5, color = &quot;#105a82&quot; ) +
-  facet_grid( crime.type ~ year, scales=&quot;free&quot; ) +
+  facet_grid( crime_type ~ year, scales=&quot;free&quot; ) +
   theme( axis.text.x=element_blank(), 
          strip.text.x = element_text( size = 15 ),
          strip.text.y = element_text( size = 12 ) ) +
@@ -539,8 +533,8 @@ Criminology Phoenix page</a>
 href="https://github.com/jacobtnyoung/OpenCrimPhx/issues/new">Issues</a>
 page. Thanks!</p>
 <p><br><br></p>
-<div id="last-updated-13-august-2025" class="section level6">
-<h6><strong><em>Last updated 13 August, 2025</em></strong></h6>
+<div id="last-updated-27-august-2025" class="section level6">
+<h6><strong><em>Last updated 27 August, 2025</em></strong></h6>
 </div>
 </div>
 
