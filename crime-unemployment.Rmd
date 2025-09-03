@@ -31,8 +31,7 @@ This page takes a look at trends in unemployment using data from the [Bureau of 
 
 To get going, we will load all the libraries we need. The code to generate everything you see here is hidden (to reduce clutter). But, if you want to see “how we get there”, just click the “Show” button on the right. 
 
-Next, we will load the data. These files are available in the [data](https://jacobtnyoung.github.io/OpenCrimPhx/data) folder for the repository.
-
+Next, we will load the data. These files are available in the [data](https://github.com/jacobtnyoung/OpenCrimPhx/tree/main/data) folder for the repository.
 
 ```{r}
 
