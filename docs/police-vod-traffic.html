@@ -322,7 +322,7 @@ going to use.</p>
 <h3>Load and Prepare the Data</h3>
 <pre class="r"><code>loc &lt;- &quot;data/citations_traffic-citations-details_citationdetail.csv&quot;
 phoenix_dat &lt;- read.csv( here( loc ), as.is = TRUE, header = TRUE )</code></pre>
-<p>There are 337956 traffic incidents from 2018 to 2025.</p>
+<p>There are 344172 traffic incidents from 2018 to 2025.</p>
 <p><br></p>
 </div>
 <div id="extract-and-process-time-variables" class="section level3">
@@ -389,11 +389,11 @@ African American” category.</p></li>
 <code>SIMPE_SUBJ_RE_GRP</code>, but pertains to the officer, not the
 citizen.</p></li>
 </ul>
-<p>For these variables there are 1109 in which the citizen’s
-race/ethnicity is listed as <em>Unknown</em> and 10884 listed as
+<p>For these variables there are 1242 in which the citizen’s
+race/ethnicity is listed as <em>Unknown</em> and 11056 listed as
 <em>Other</em>. These are removed from the analysis. <em>Unknown</em>
 and <em>Other</em> represent 0 and 3, percent of all cases,
-respectively. Also, there are 12198 in which the officer’s
+respectively. Also, there are 12374 in which the officer’s
 race/ethnicity is listed as <em>Other</em>.</p>
 <p>These incidents are coded as missing (i.e. <code>NA</code>) and
 removed from the analysis.</p>
@@ -474,21 +474,21 @@ pander( race_pct_table, caption = &quot;Percentage of Stops by Race and Light Co
 <tbody>
 <tr class="odd">
 <td align="center">All Stops</td>
-<td align="center">13.85</td>
-<td align="center">44.15</td>
-<td align="center">42.01</td>
+<td align="center">13.84</td>
+<td align="center">44.11</td>
+<td align="center">42.05</td>
 </tr>
 <tr class="even">
 <td align="center">Daylight</td>
 <td align="center">13.59</td>
-<td align="center">42.91</td>
-<td align="center">43.5</td>
+<td align="center">42.87</td>
+<td align="center">43.54</td>
 </tr>
 <tr class="odd">
 <td align="center">Darkness</td>
-<td align="center">15.25</td>
-<td align="center">51.02</td>
-<td align="center">33.73</td>
+<td align="center">15.28</td>
+<td align="center">51.01</td>
+<td align="center">33.72</td>
 </tr>
 </tbody>
 </table>
@@ -497,9 +497,9 @@ pander( race_pct_table, caption = &quot;Percentage of Stops by Race and Light Co
 <li><p>The <em>All Stops</em> row represents the percentage of all stops
 that the specific racial/ethnic group represents.</p>
 <ul>
-<li>Citizens who were coded as <strong>Black</strong> made up 13.85
+<li>Citizens who were coded as <strong>Black</strong> made up 13.84
 percent of all traffic stops, whereas those coded as
-<strong>Hispanic</strong> made up 44.15 percent.</li>
+<strong>Hispanic</strong> made up 44.11 percent.</li>
 </ul></li>
 </ul>
 <p><br></p>
@@ -513,12 +513,12 @@ day versus night.</p>
 <ul>
 <li><p>Citizens who were coded as <strong>Black</strong> represent 13.59
 percent of traffic stops during the day whereas this same group
-represents 15.25 percent of traffic stops at night. In other words,
+represents 15.28 percent of traffic stops at night. In other words,
 citizens who are <strong>Black</strong> are less likely to be pulled
 over during the day, than at night.</p></li>
 <li><p>Citizens who were coded as <strong>Hispanic</strong> represent
-42.91 percent of traffic stops during the day whereas this same group
-represents 51.02 percent of traffic stops at night. In other words,
+42.87 percent of traffic stops during the day whereas this same group
+represents 51.01 percent of traffic stops at night. In other words,
 citizens who are <strong>Hispanic</strong> are less likely to be pulled
 over during the day, than at night.</p></li>
 </ul></li>
@@ -635,15 +635,15 @@ Phoenix, Coefficients with Standard Errors</caption>
 <tbody>
 <tr class="odd">
 <td align="center">(Intercept)</td>
-<td align="center">-1.733 (0.015)***</td>
-<td align="center">0.061 (0.011)***</td>
+<td align="center">-1.731 (0.015)***</td>
+<td align="center">0.060 (0.011)***</td>
 <td align="center">-0.688 (0.011)***</td>
 </tr>
 <tr class="even">
 <td align="center">daylight</td>
-<td align="center">-0.116 (0.017)***</td>
-<td align="center">-0.335 (0.012)***</td>
-<td align="center">0.415 (0.012)***</td>
+<td align="center">-0.119 (0.016)***</td>
+<td align="center">-0.336 (0.012)***</td>
+<td align="center">0.416 (0.012)***</td>
 </tr>
 </tbody>
 </table>
@@ -757,15 +757,15 @@ Phoenix, Coefficients with Standard Errors</caption>
 <tbody>
 <tr class="odd">
 <td align="center">(Intercept)</td>
-<td align="center">-2.378 (0.094)***</td>
-<td align="center">-0.209 (0.064)**</td>
-<td align="center">-0.381 (0.061)***</td>
+<td align="center">-2.369 (0.094)***</td>
+<td align="center">-0.222 (0.063)***</td>
+<td align="center">-0.373 (0.061)***</td>
 </tr>
 <tr class="even">
 <td align="center">daylight</td>
-<td align="center">-0.157 (0.024)***</td>
-<td align="center">-0.148 (0.018)***</td>
-<td align="center">0.270 (0.019)***</td>
+<td align="center">-0.164 (0.024)***</td>
+<td align="center">-0.145 (0.018)***</td>
+<td align="center">0.271 (0.019)***</td>
 </tr>
 <tr class="odd">
 <td align="center">SUBJ_AGE</td>
@@ -775,20 +775,20 @@ Phoenix, Coefficients with Standard Errors</caption>
 </tr>
 <tr class="even">
 <td align="center">officer_black</td>
-<td align="center">-0.029 (0.028)</td>
-<td align="center">0.060 (0.021)**</td>
-<td align="center">-0.038 (0.023)</td>
+<td align="center">-0.026 (0.028)</td>
+<td align="center">0.057 (0.021)**</td>
+<td align="center">-0.038 (0.022)</td>
 </tr>
 <tr class="odd">
 <td align="center">officer_hisp</td>
-<td align="center">-0.020 (0.017)</td>
-<td align="center">0.040 (0.013)**</td>
-<td align="center">-0.030 (0.014)*</td>
+<td align="center">-0.021 (0.017)</td>
+<td align="center">0.043 (0.013)***</td>
+<td align="center">-0.033 (0.014)*</td>
 </tr>
 <tr class="even">
 <td align="center">officer_male</td>
-<td align="center">0.053 (0.022)*</td>
-<td align="center">-0.075 (0.017)***</td>
+<td align="center">0.051 (0.022)*</td>
+<td align="center">-0.074 (0.017)***</td>
 <td align="center">0.047 (0.017)**</td>
 </tr>
 <tr class="odd">
@@ -799,8 +799,8 @@ Phoenix, Coefficients with Standard Errors</caption>
 </tr>
 <tr class="even">
 <td align="center">subj_male</td>
-<td align="center">-0.038 (0.014)**</td>
-<td align="center">0.159 (0.011)***</td>
+<td align="center">-0.041 (0.014)**</td>
+<td align="center">0.161 (0.011)***</td>
 <td align="center">-0.150 (0.011)***</td>
 </tr>
 </tbody>
